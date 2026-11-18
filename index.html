@@ -1,0 +1,3202 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<!-- No user-scalable=no: a child should be able to pinch-zoom code. Instead
+     every input is 16px or larger, which is what stops iOS zooming on focus. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Danny's Code Arcade</title>
+<meta name="description" content="Thirty missions of real JavaScript, ending in a game you can play.">
+<meta name="theme-color" content="#0E3B2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Code Arcade">
+<link rel="apple-touch-icon" href="icon-180.png">
+<!-- Inline favicon (a gold coin on the pitch) so the page still has one even
+     if icon-180.png was not copied alongside it. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='6'%20fill='%230E3B2E'/%3E%3Ccircle%20cx='16'%20cy='16'%20r='8'%20fill='%23FFC233'/%3E%3C/svg%3E">
+<style>
+/* ===========================================================================
+   Danny's Code Arcade — styles
+   Floodlit-pitch palette: deep green cabinet, coin gold as the one accent.
+   Buttons are physical: a hard offset shadow that compresses when pressed.
+   =========================================================================== */
+
+:root {
+  --pitch:       #0E3B2E;
+  --pitch-deep:  #092A21;
+  --pitch-raise: #144C3B;
+  --pitch-line:  #1E6450;
+  --chalk:       #F2F7F4;
+  --chalk-dim:   #A8C2B8;
+  --coin:        #FFC233;
+  --coin-dark:   #B8810F;
+  --kit:         #E8452C;
+  --kit-light:   #FF9583;
+  --sky:         #5BC8F5;
+  --sky-dark:    #2379A0;
+
+  /* The editor's three layers (gutter, highlight, textarea) must share these
+     exactly, in px. Using unitless line-height or em makes the layers drift
+     apart by a line or two further down the file. */
+  --code-fs: 16px;
+  --code-lh: 26px;
+
+  --ff: "Avenir Next", "Avenir", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --ff-code: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+
+  --r-block: 6px;    /* mission badges — blocky */
+  --r-btn:   10px;
+  --r-panel: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  background: var(--pitch-deep);
+}
+
+body {
+  margin: 0;
+  font-family: var(--ff);
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--chalk);
+  background: var(--pitch);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.screen { max-width: 1180px; margin: 0 auto; padding: 20px 18px 64px; }
+[hidden] { display: none !important; }
+
+:focus-visible {
+  outline: 3px solid var(--sky);
+  outline-offset: 2px;
+}
+
+/* --------------------------------- buttons -------------------------------- */
+
+.btn {
+  font: inherit;
+  font-weight: 700;
+  border: 0;
+  border-radius: var(--r-btn);
+  padding: 13px 20px;
+  min-height: 48px;           /* comfortable for a finger */
+  color: var(--pitch-deep);
+  background: var(--coin);
+  box-shadow: 0 4px 0 var(--coin-dark);
+  cursor: pointer;
+  touch-action: manipulation;  /* no double-tap zoom delay */
+  transition: transform .06s ease, box-shadow .06s ease;
+}
+.btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--coin-dark);
+}
+.btn:disabled { opacity: .45; box-shadow: 0 4px 0 var(--coin-dark); }
+
+.btn-sky { background: var(--sky); box-shadow: 0 4px 0 var(--sky-dark); }
+.btn-sky:active { box-shadow: 0 1px 0 var(--sky-dark); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--chalk);
+  box-shadow: inset 0 0 0 2px var(--pitch-line);
+  font-weight: 600;
+}
+.btn-ghost:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px var(--pitch-line); }
+
+.btn-big { font-size: 20px; padding: 17px 28px; min-height: 60px; width: 100%; }
+
+.icon-btn {
+  width: 48px; height: 48px;
+  display: grid; place-items: center;
+  border: 0; border-radius: var(--r-btn);
+  background: var(--pitch-raise);
+  color: var(--chalk);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.icon-btn:active { background: var(--pitch-line); }
+.icon-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------------------------------- home ---------------------------------- */
+
+#screen-home {
+  /* Faint mown-pitch stripes. Barely there on purpose. */
+  background-image: repeating-linear-gradient(90deg,
+    rgba(255,255,255,.014) 0 44px, rgba(0,0,0,0) 44px 88px);
+}
+
+.cabinet { padding: 26px 0 8px; }
+
+.wordmark {
+  font-size: clamp(38px, 11vw, 68px);
+  font-weight: 800;
+  line-height: .96;
+  letter-spacing: -.025em;
+  margin: 0;
+  color: var(--coin);
+}
+.tagline {
+  margin: 14px 0 0;
+  max-width: 34ch;
+  color: var(--chalk-dim);
+  font-size: 18px;
+}
+
+.resume { margin: 28px 0 34px; }
+
+.progress { margin-top: 16px; }
+.progress-count { font-size: 16px; color: var(--chalk-dim); margin-bottom: 8px; }
+.progress-count strong { color: var(--coin); font-size: 20px; }
+.progress-blocks { display: flex; gap: 3px; }
+.progress-blocks i {
+  flex: 1 1 0; height: 10px; border-radius: 2px;
+  background: var(--pitch-raise);
+}
+.progress-blocks i.on { background: var(--coin); }
+
+/* mission map */
+.unit { margin: 0 0 22px; }
+.unit-head {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 10px;
+}
+.unit-no {
+  font-size: 15px; font-weight: 700; color: var(--coin-dark);
+  min-width: 2.2em;
+}
+.unit-name { font-size: 19px; font-weight: 700; margin: 0; }
+
+.badges { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.badge {
+  position: relative;
+  width: 106px; min-height: 96px;
+  border: 0; border-radius: var(--r-block);
+  background: var(--pitch-raise);
+  color: var(--chalk);
+  font-family: inherit;
+  text-align: left;
+  padding: 10px 10px 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 3px 0 var(--pitch-deep);
+  transition: transform .08s ease;
+}
+.badge:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--pitch-deep); }
+.badge .n { display: block; font-size: 26px; font-weight: 800; line-height: 1; }
+.badge .t { display: block; font-size: 12.5px; line-height: 1.25; margin-top: 6px; color: var(--chalk-dim); }
+
+.badge.done { background: var(--coin); color: var(--pitch-deep); box-shadow: 0 3px 0 var(--coin-dark); }
+.badge.done .t { color: rgba(9,42,33,.75); }
+.badge.done::after {
+  content: ""; position: absolute; top: 9px; right: 9px;
+  width: 16px; height: 9px;
+  border-left: 3.5px solid var(--pitch-deep);
+  border-bottom: 3.5px solid var(--pitch-deep);
+  transform: rotate(-45deg);
+}
+.badge.stamp { animation: stamp .36s ease-out; }
+
+.badge.next { box-shadow: 0 3px 0 var(--pitch-deep), inset 0 0 0 3px var(--coin); }
+.badge.next .n { color: var(--coin); }
+/* The one piece of motion that runs on its own: it points at where to go next. */
+.badge.next { animation: breathe 2.6s ease-in-out infinite; }
+
+.badge.locked { opacity: .42; cursor: default; box-shadow: none; }
+.badge.locked:active { transform: none; }
+.badge.locked .lock { position: absolute; top: 10px; right: 10px; width: 14px; height: 14px; }
+.badge.locked .lock svg { width: 14px; height: 14px; fill: none; stroke: var(--chalk-dim); stroke-width: 2.2; }
+
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 3px 0 var(--pitch-deep), inset 0 0 0 3px var(--coin); }
+  50%      { box-shadow: 0 3px 0 var(--pitch-deep), inset 0 0 0 3px var(--coin), 0 0 0 5px rgba(255,194,51,.22); }
+}
+@keyframes stamp {
+  0%   { transform: scale(1.14) rotate(-2deg); }
+  60%  { transform: scale(.97); }
+  100% { transform: scale(1); }
+}
+
+.home-links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px; }
+
+/* -------------------------------- top bar --------------------------------- */
+
+.topbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0 18px;
+}
+.topbar-spacer { flex: 1; }
+.mission-pill {
+  background: var(--coin); color: var(--pitch-deep);
+  font-weight: 800; font-size: 15px;
+  padding: 6px 12px; border-radius: var(--r-block);
+  white-space: nowrap;
+}
+.mission-unit { color: var(--chalk-dim); font-size: 16px; }
+
+/* -------------------------------- mission --------------------------------- */
+
+/* minmax(0,1fr) not 1fr: with plain 1fr a long line of code pushes the column
+   wider than the screen and the whole page scrolls sideways. */
+.mission-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
+@media (min-width: 900px) {
+  .mission-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 30px; align-items: start; }
+}
+.free-mode .lesson-col { display: none; }
+.free-mode .mission-grid { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
+
+.lesson-col h2 {
+  font-size: 28px; font-weight: 800; letter-spacing: -.015em;
+  margin: 0 0 14px;
+}
+.teach { color: var(--chalk); }
+.teach p { margin: 0 0 12px; max-width: 62ch; }
+.teach b { color: var(--coin); font-weight: 700; }
+.teach i { color: var(--chalk-dim); }
+
+code, .teach code {
+  font-family: var(--ff-code);
+  font-size: .92em;
+  background: var(--pitch-deep);
+  color: var(--coin);
+  padding: 2px 6px;
+  border-radius: 4px;
+  /* pre-wrap, not nowrap: a long snippet in a feedback message used to push
+     the entire page sideways. break-word only kicks in for a single token too
+     long to fit, so short snippets still stay on one line. */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.example {
+  background: var(--pitch-deep);
+  border-radius: var(--r-panel);
+  border-left: 5px solid var(--pitch-line);
+  padding: 14px 16px;
+  margin: 18px 0;
+  overflow-x: auto;
+}
+.example-label { font-size: 14px; color: var(--chalk-dim); margin-bottom: 8px; }
+.example pre {
+  margin: 0;
+  font-family: var(--ff-code);
+  font-size: 15px; line-height: 24px;
+  color: var(--chalk);
+  white-space: pre;
+}
+
+.task {
+  background: var(--pitch-raise);
+  border-radius: var(--r-panel);
+  padding: 16px 18px;
+  margin: 18px 0;
+}
+.task-label { font-size: 14px; color: var(--coin); margin-bottom: 6px; font-weight: 700; }
+
+.helpers { display: flex; gap: 10px; flex-wrap: wrap; }
+.hint {
+  margin-top: 14px; padding: 14px 16px;
+  background: var(--pitch-deep);
+  border-radius: var(--r-panel);
+  border-left: 5px solid var(--sky);
+}
+.hint-title { font-weight: 700; color: var(--sky); margin-bottom: 6px; }
+.hint pre {
+  margin: 6px 0 0; font-family: var(--ff-code); font-size: 15px; line-height: 23px;
+  white-space: pre-wrap; color: var(--chalk);
+}
+
+/* --------------------------------- editor --------------------------------- */
+
+.editor {
+  display: flex;
+  background: var(--pitch-deep);
+  border-radius: var(--r-panel);
+  border: 2px solid var(--pitch-line);
+  overflow: hidden;
+}
+.gutter {
+  flex: 0 0 auto;
+  padding: 12px 8px 12px 12px;
+  background: rgba(0,0,0,.18);
+  color: #4E7F6F;
+  font-family: var(--ff-code);
+  font-size: var(--code-fs);
+  line-height: var(--code-lh);
+  text-align: right;
+  user-select: none;
+  white-space: pre;
+}
+.code-area { position: relative; flex: 1 1 auto; min-width: 0; }
+
+.highlight, .code-input {
+  margin: 0;
+  padding: 12px 14px;
+  font-family: var(--ff-code);
+  font-size: var(--code-fs);
+  line-height: var(--code-lh);
+  white-space: pre;
+  tab-size: 2;
+  border: 0;
+}
+.highlight {
+  position: absolute; inset: 0;
+  overflow: hidden;              /* scrolled programmatically to match the textarea */
+  pointer-events: none;
+  color: var(--chalk);
+}
+.code-input {
+  position: relative;
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--coin);
+  resize: none;
+  /* The box is grown by JS to fit every line, so there is nothing to scroll
+     vertically — and leaving overflow-y as auto produced a stray scrollbar
+     from sub-pixel line-height rounding. Long lines still scroll sideways,
+     because soft wrapping would break the line numbers. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  outline: none;
+}
+.code-input::selection { background: rgba(91,200,245,.32); }
+
+/* syntax colours */
+.t-str { color: #9BE08B; }
+.t-num { color: #FFC233; }
+.t-com { color: #5E8C7D; font-style: italic; }
+.t-key { color: #FF9583; font-weight: 600; }
+.t-api { color: var(--sky); }
+
+/* These wrap onto as many rows as needed rather than scrolling sideways: a
+   child will not discover a swipe, and half the symbols were hidden. */
+.symbol-row {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 10px 0 2px;
+}
+.symbol-row button {
+  flex: 0 0 auto;
+  min-width: 46px; height: 44px;
+  font-family: var(--ff-code); font-size: 16px;
+  border: 0; border-radius: 8px;
+  background: var(--pitch-raise); color: var(--chalk);
+  cursor: pointer; touch-action: manipulation;
+}
+.symbol-row button:active { background: var(--pitch-line); }
+
+.run-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.run-row .btn { flex: 1 1 160px; }
+
+/* --------------------------------- result --------------------------------- */
+
+.result {
+  margin-top: 14px; padding: 16px 18px;
+  border-radius: var(--r-panel);
+  background: var(--pitch-raise);
+  border-left: 6px solid var(--pitch-line);
+}
+.result h3 { margin: 0 0 8px; font-size: 19px; }
+.result p { margin: 0 0 8px; }
+.result p:last-child { margin-bottom: 0; }
+.result.good { border-left-color: var(--coin); background: rgba(255,194,51,.12); }
+.result.good h3 { color: var(--coin); }
+.result.bad { border-left-color: var(--kit); background: rgba(232,69,44,.1); }
+.result.bad h3 { color: var(--kit-light); }
+.result.note { border-left-color: var(--sky); }
+.result.note h3 { color: var(--sky); }
+.result code { background: rgba(0,0,0,.35); }
+
+/* ---------------------------------- stage --------------------------------- */
+
+.stage { margin-top: 14px; }
+.stage-label { font-size: 14px; color: var(--chalk-dim); margin-bottom: 6px; }
+
+#canvas-wrap { margin-bottom: 12px; }
+canvas {
+  display: block;
+  width: 100%; max-width: 360px;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  background: #0A1F19;
+  border-radius: var(--r-panel);
+  border: 2px solid var(--pitch-line);
+  touch-action: none;            /* dragging the paddle must not scroll the page */
+}
+
+.output {
+  margin: 0;
+  min-height: 92px;
+  max-height: 44vh;
+  overflow: auto;
+  padding: 14px;
+  background: var(--pitch-deep);
+  border-radius: var(--r-panel);
+  border: 2px solid var(--pitch-line);
+  font-family: var(--ff-code);
+  font-size: 15px; line-height: 23px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.output .empty { color: #4E7F6F; }
+
+.nav-row { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.nav-row .btn { flex: 1 1 150px; }
+
+/* ------------------------------- cheat sheet ------------------------------ */
+
+.sheet-section { margin-bottom: 26px; }
+.sheet-section h3 {
+  font-size: 20px; margin: 0 0 10px; color: var(--coin);
+}
+.sheet-row {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px 18px;
+  padding: 10px 0; border-top: 1px solid var(--pitch-line);
+}
+@media (min-width: 620px) {
+  .sheet-row { grid-template-columns: minmax(0, 22ch) minmax(0, 1fr); }
+}
+.sheet-row pre {
+  margin: 0; font-family: var(--ff-code); font-size: 14.5px; line-height: 22px;
+  color: var(--chalk); white-space: pre-wrap;
+}
+.sheet-row span { color: var(--chalk-dim); font-size: 15.5px; }
+
+h2.screen-title {
+  font-size: 30px; font-weight: 800; letter-spacing: -.015em; margin: 0 0 18px;
+}
+
+/* ------------------------------ accessibility ----------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================== the map ============================== -->
+  <section id="screen-home" class="screen">
+    <header class="cabinet">
+      <h1 class="wordmark">Danny's<br>Code Arcade</h1>
+      <p class="tagline">Thirty missions of real JavaScript. The last three build a
+        game you can actually play.</p>
+    </header>
+
+    <div class="resume">
+      <button id="btn-resume" class="btn btn-big">Start mission 1</button>
+      <div class="progress">
+        <div class="progress-count"><strong id="done-count">0</strong> of 30 done</div>
+        <div class="progress-blocks" id="progress-blocks"></div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+
+    <nav class="home-links">
+      <button class="btn btn-ghost" data-go="free">Free play</button>
+      <button class="btn btn-ghost" data-go="sheet">Cheat sheet</button>
+      <button class="btn btn-ghost" id="btn-reset">Start again</button>
+    </nav>
+  </section>
+
+  <!-- ============================= a mission ============================= -->
+  <section id="screen-mission" class="screen" hidden>
+    <div class="topbar">
+      <button class="icon-btn" data-go="home" aria-label="Back to the map">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="mission-pill" id="mission-pill">Mission 1</span>
+      <span class="mission-unit" id="mission-unit"></span>
+      <span class="topbar-spacer"></span>
+      <button class="icon-btn" data-go="sheet" aria-label="Cheat sheet">
+        <svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 10h8M8 14h6"/></svg>
+      </button>
+    </div>
+
+    <div class="mission-grid">
+      <div class="lesson-col">
+        <h2 id="mission-title"></h2>
+        <div class="teach" id="mission-teach"></div>
+
+        <div class="example" id="example-box">
+          <div class="example-label">Like this</div>
+          <pre id="mission-example"></pre>
+        </div>
+
+        <div class="task">
+          <div class="task-label">Your turn</div>
+          <div id="mission-task"></div>
+        </div>
+
+        <div class="helpers">
+          <button class="btn btn-ghost" id="btn-hint">Need a hint?</button>
+          <button class="btn btn-ghost" id="btn-solution">Show me how</button>
+        </div>
+        <div class="hint" id="hint-box" hidden></div>
+      </div>
+
+      <div class="work-col">
+        <div class="editor" id="editor">
+          <div class="gutter" id="gutter" aria-hidden="true">1</div>
+          <div class="code-area">
+            <pre class="highlight" id="highlight" aria-hidden="true"></pre>
+            <textarea class="code-input" id="code" rows="6" wrap="off"
+              spellcheck="false" autocapitalize="off" autocorrect="off"
+              autocomplete="off" aria-label="Your code"></textarea>
+          </div>
+        </div>
+
+        <div class="symbol-row" id="symbol-row"></div>
+
+        <div class="run-row">
+          <button class="btn" id="btn-run">Run it</button>
+          <button class="btn btn-sky" id="btn-check">Check my answer</button>
+        </div>
+
+        <div class="result" id="result" hidden></div>
+
+        <div class="stage">
+          <div id="canvas-wrap" hidden>
+            <canvas id="canvas" width="320" height="320" aria-label="Your picture"></canvas>
+          </div>
+          <pre class="output" id="output"><span class="empty">Nothing yet. Tap Run it.</span></pre>
+        </div>
+
+        <div class="nav-row">
+          <button class="btn btn-ghost" id="btn-prev">Previous</button>
+          <button class="btn" id="btn-next" hidden>Next mission</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== the cheat sheet ========================== -->
+  <section id="screen-sheet" class="screen" hidden>
+    <div class="topbar">
+      <button class="icon-btn" data-go="home" aria-label="Back to the map">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <span class="topbar-spacer"></span>
+    </div>
+    <h2 class="screen-title">Cheat sheet</h2>
+    <p class="tagline">Everything the arcade knows. Copy anything from here.</p>
+    <div id="sheet"></div>
+  </section>
+
+</div>
+<script>
+/* ============================================================================
+   Danny's Code Arcade — the code runner
+   ----------------------------------------------------------------------------
+   This file takes the JavaScript a child typed and runs it safely. It has no
+   access to the page (no document, no window) — everything it needs is passed
+   in by the host as callbacks. That keeps it testable from Node, which is how
+   all 30 missions get checked automatically.
+
+   Four jobs, in order:
+     1. repairQuotes  — undo iOS turning " into “ ”, which JavaScript rejects
+     2. scanMask      — work out which characters are real code, not strings
+     3. guardLoops    — weld a hidden counter into every loop so a runaway
+                        loop stops with an explanation instead of freezing
+     4. run           — build a function and call it, rewriting any error
+                        message into plain English
+   ========================================================================== */
+
+(function (root) {
+  'use strict';
+
+  /* --------------------------------------------------------------------------
+     The API the child's code can use. These are handed in as function
+     PARAMETERS, not globals. That matters: if the child writes `let circle = 2`
+     while `circle` is also a parameter name, JavaScript throws a hard
+     SyntaxError before a single line runs. So any name the child declares is
+     dropped from the parameter list (see findDeclaredNames).
+     -------------------------------------------------------------------------- */
+  var API_NAMES = [
+    'say', 'clear', 'randomInt',
+    'background', 'rect', 'circle', 'line', 'write',
+    'width', 'height',
+    'onFrame', 'onDrag'
+  ];
+
+  var CANVAS_W = 320;
+  var CANVAS_H = 320;
+
+  /* ==========================================================================
+     1. iOS smart-quote repair
+     ========================================================================== */
+
+  // iOS replaces straight quotes with curly ones as you type. JavaScript only
+  // accepts straight ones, so the child hits a baffling error caused by their
+  // keyboard. Swap them back and tell them we did it.
+  function repairQuotes(src) {
+    var fixed = src
+      .replace(/[“”„‟]/g, '"')   // “ ” „ ‟
+      .replace(/[‘’‚‛]/g, "'")   // ‘ ’ ‚ ‛
+      .replace(/[–—]/g, '-')               // – —
+      .replace(/ /g, ' ');                      // non-breaking space
+    return { text: fixed, changed: fixed !== src };
+  }
+
+  /* ==========================================================================
+     2. Mask of "real code" positions
+     --------------------------------------------------------------------------
+     Returns a byte per character: 1 means the character is live code, 0 means
+     it sits inside a string, a comment, a template literal or a regex. Every
+     later rewrite consults this, so we never inject a loop guard into the
+     middle of someone's text.
+     ========================================================================== */
+
+  function scanMask(src) {
+    var n = src.length;
+    var mask = new Uint8Array(n);
+    var i = 0;
+    var lastSig = '';   // last significant code character, for the regex/divide test
+
+    // A '/' begins a regex only when a value cannot legally have just ended.
+    function regexCanStart(ch) {
+      if (ch === '') return true;
+      return !/[A-Za-z0-9_$)\]}.]/.test(ch);
+    }
+
+    while (i < n) {
+      var c = src[i];
+      var c2 = src[i + 1];
+
+      // line comment
+      if (c === '/' && c2 === '/') {
+        while (i < n && src[i] !== '\n') i++;
+        continue;
+      }
+      // block comment
+      if (c === '/' && c2 === '*') {
+        i += 2;
+        while (i < n && !(src[i] === '*' && src[i + 1] === '/')) i++;
+        i += 2;
+        continue;
+      }
+      // single or double quoted string
+      if (c === '"' || c === "'") {
+        i++;
+        while (i < n) {
+          if (src[i] === '\\') { i += 2; continue; }
+          if (src[i] === c) { i++; break; }
+          if (src[i] === '\n') break;            // unterminated — let JS report it
+          i++;
+        }
+        lastSig = 'x';
+        continue;
+      }
+      // template literal. The whole thing counts as not-code, including any
+      // ${...} parts. A loop statement cannot appear inside ${} anyway, and
+      // treating it as code would mean tracking nested quotes for no gain.
+      if (c === '`') {
+        i++;
+        var depth = 0;
+        while (i < n) {
+          if (src[i] === '\\') { i += 2; continue; }
+          if (src[i] === '$' && src[i + 1] === '{') { depth++; i += 2; continue; }
+          if (src[i] === '}' && depth > 0) { depth--; i++; continue; }
+          if (src[i] === '`' && depth === 0) { i++; break; }
+          i++;
+        }
+        lastSig = 'x';
+        continue;
+      }
+      // regex literal
+      if (c === '/' && regexCanStart(lastSig)) {
+        i++;
+        var inClass = false;
+        while (i < n) {
+          if (src[i] === '\\') { i += 2; continue; }
+          if (src[i] === '[') inClass = true;
+          else if (src[i] === ']') inClass = false;
+          else if (src[i] === '/' && !inClass) { i++; break; }
+          else if (src[i] === '\n') break;
+          i++;
+        }
+        while (i < n && /[a-z]/.test(src[i])) i++;   // flags
+        lastSig = 'x';
+        continue;
+      }
+
+      mask[i] = 1;
+      if (!/\s/.test(c)) lastSig = c;
+      i++;
+    }
+    return mask;
+  }
+
+  // Find the ')' matching the '(' at index `open`, ignoring brackets that live
+  // inside strings. Returns -1 if it is never closed.
+  function matchParen(src, open, mask) {
+    var depth = 0;
+    for (var i = open; i < src.length; i++) {
+      if (!mask[i]) continue;
+      var c = src[i];
+      if (c === '(') depth++;
+      else if (c === ')') {
+        depth--;
+        if (depth === 0) return i;
+      }
+    }
+    return -1;
+  }
+
+  /* ==========================================================================
+     3a. Which names has the child declared?
+     ========================================================================== */
+
+  function findDeclaredNames(src, mask) {
+    var found = Object.create(null);
+    var re = /\b(let|const|var|function|class)\b/g;
+    var m;
+
+    while ((m = re.exec(src)) !== null) {
+      if (!mask[m.index]) continue;                 // the word sat inside a string
+
+      var kind = m[1];
+      var j = m.index + m[0].length;
+      while (j < src.length && /[\s*]/.test(src[j])) j++;   // skip space and generator *
+
+      // Must be followed by a real identifier. This is the check that stops
+      // `onFrame(function () { clear() })` registering `clear` as declared —
+      // after `function` comes '(', not a name, so there is nothing to record.
+      var id = /^[A-Za-z_$][\w$]*/.exec(src.slice(j));
+      if (!id) continue;
+
+      found[id[0]] = true;
+      if (kind === 'function' || kind === 'class') continue;
+
+      // For let/const/var also pick up extra names in a comma list, e.g.
+      // `let a = 1, write = 2` — missing `write` here would be a SyntaxError.
+      var k = j, depth = 0, piece = '', pieces = [];
+      while (k < src.length) {
+        var ch = src[k];
+        if (!mask[k]) { piece += ' '; k++; continue; }
+        if (ch === '(' || ch === '[' || ch === '{') { depth++; piece += ch; k++; continue; }
+        if (ch === ')' || ch === ']' || ch === '}') {
+          if (depth === 0) break;
+          depth--; piece += ch; k++; continue;
+        }
+        if (depth === 0 && (ch === ';' || ch === '\n')) break;
+        if (depth === 0 && ch === ',') { pieces.push(piece); piece = ''; k++; continue; }
+        piece += ch; k++;
+      }
+      pieces.push(piece);
+      for (var p = 0; p < pieces.length; p++) {
+        var id2 = /^\s*([A-Za-z_$][\w$]*)/.exec(pieces[p]);
+        if (id2) found[id2[1]] = true;
+      }
+    }
+    return found;
+  }
+
+  /* ==========================================================================
+     3b. Loop guard
+     --------------------------------------------------------------------------
+     The guard goes into the loop's CONDITION, not its body. That is deliberate:
+     a condition rewrite also covers loops written without curly braces, which
+     a body rewrite would miss.
+
+         while (score < 10)            ->  while ((score < 10) && __tick())
+         for (let i = 0; i < 5; i++)   ->  for (let i = 0; (i < 5) && __tick(); i++)
+         for (const c of word)         ->  for (const c of __iter(word))
+
+     `do { } while (c)` is caught by the same `while` rule; the guard is
+     harmless there because __tick() returns true.
+     ========================================================================== */
+
+  // Split a for-header on its top-level semicolons.
+  function splitTop(header, mask, offset) {
+    var parts = [], cur = '', depth = 0;
+    for (var i = 0; i < header.length; i++) {
+      var live = mask[offset + i];
+      var c = header[i];
+      if (live) {
+        if (c === '(' || c === '[' || c === '{') depth++;
+        else if (c === ')' || c === ']' || c === '}') depth--;
+        else if (c === ';' && depth === 0) { parts.push(cur); cur = ''; continue; }
+      }
+      cur += c;
+    }
+    parts.push(cur);
+    return parts;
+  }
+
+  // Find a standalone `of` / `in` keyword at the top level of a for-header.
+  function findForEachKeyword(header, mask, offset) {
+    var depth = 0;
+    for (var i = 0; i < header.length; i++) {
+      if (!mask[offset + i]) continue;
+      var c = header[i];
+      if (c === '(' || c === '[' || c === '{') { depth++; continue; }
+      if (c === ')' || c === ']' || c === '}') { depth--; continue; }
+      if (depth !== 0) continue;
+      if ((c === 'o' || c === 'i') && /^(of|in)\b/.test(header.slice(i))) {
+        var before = i === 0 ? ' ' : header[i - 1];
+        if (/[\w$]/.test(before)) continue;               // part of a longer word
+        return { kind: header.slice(i, i + 2), at: i };
+      }
+    }
+    return null;
+  }
+
+  function guardLoops(src, mask) {
+    var edits = [];
+    var re = /\b(while|for)\b/g;
+    var m;
+
+    while ((m = re.exec(src)) !== null) {
+      if (!mask[m.index]) continue;
+
+      var k = m.index + m[0].length;
+      while (k < src.length && /\s/.test(src[k])) k++;
+      if (src[k] !== '(') continue;                      // not a loop header
+
+      var open = k;
+      var close = matchParen(src, open, mask);
+      if (close < 0) continue;                           // unclosed — JS will say so
+
+      var header = src.slice(open + 1, close);
+      var replacement = null;
+
+      if (m[1] === 'while') {
+        if (header.trim() === '') continue;
+        replacement = '((' + header + ') && __tick())';
+      } else {
+        var parts = splitTop(header, mask, open + 1);
+        if (parts.length === 3) {
+          var cond = parts[1].trim() === '' ? '__tick()' : '(' + parts[1] + ') && __tick()';
+          replacement = '(' + parts[0] + ';' + cond + ';' + parts[2] + ')';
+        } else if (parts.length === 1) {
+          var kw = findForEachKeyword(header, mask, open + 1);
+          // for-in walks a fixed set of keys, so only for-of can run away
+          // (its list can be pushed to from inside the loop).
+          if (kw && kw.kind === 'of') {
+            var left = header.slice(0, kw.at + 2);
+            var rhs = header.slice(kw.at + 2);
+            replacement = '(' + left + ' __iter(' + rhs + '))';
+          }
+        }
+      }
+
+      if (replacement !== null) {
+        edits.push({ from: open, to: close + 1, text: replacement });
+      }
+    }
+
+    // Apply right-to-left so earlier offsets stay valid.
+    edits.sort(function (a, b) { return b.from - a.from; });
+    var outSrc = src;
+    for (var i = 0; i < edits.length; i++) {
+      var e = edits[i];
+      outSrc = outSrc.slice(0, e.from) + e.text + outSrc.slice(e.to);
+    }
+    return outSrc;
+  }
+
+  /* ==========================================================================
+     4. Turning JavaScript's errors into English
+     ========================================================================== */
+
+  function ArcadeTimeout(msg) { this.name = 'ArcadeTimeout'; this.message = msg; }
+  ArcadeTimeout.prototype = Object.create(Error.prototype);
+
+  var ERROR_RULES = [
+    {
+      // Some sandboxed viewers forbid building functions from text, which is
+      // how this whole arcade runs code. Nothing the child can fix, so say so.
+      test: /Content Security Policy|unsafe-eval/i,
+      msg: function () {
+        return 'This arcade cannot run code here, because the window it is open in' +
+          ' does not allow it.\n' +
+          'Open <b>index.html</b> in Safari or Chrome, or from its web address, and' +
+          ' it will work. Nothing is wrong with your code.';
+      }
+    },
+    {
+      test: /^(\w[\w$]*) is not defined$/,
+      msg: function (m) {
+        return 'JavaScript has never heard of <b>' + m[1] + '</b>.\n' +
+          'If this is a new box for storing something, it needs <b>let</b> in front the first time:\n' +
+          '<code>let ' + m[1] + ' = 0</code>\n' +
+          'If you made it already, check the spelling — capital letters count, so <b>Score</b> and <b>score</b> are two different things.';
+      }
+    },
+    {
+      test: /^(?:(.+) is not a function|(.+) is not a function\.?)$/,
+      msg: function (m) {
+        var name = (m[1] || '').replace(/^.*\./, '');
+        return 'You used round brackets after <b>' + (name || 'that') + '</b>, which tells JavaScript to run it like a command — but it is not a command.\n' +
+          'Either it is a number or a word (so drop the brackets), or the name is misspelled.';
+      }
+    },
+    {
+      test: /^Assignment to constant variable\.?$/,
+      msg: function () {
+        return 'You made that with <b>const</b>, which means "never changes", and then tried to change it.\n' +
+          'Use <b>let</b> instead when you want to be able to change it later.';
+      }
+    },
+    {
+      test: /^Identifier '(.+)' has already been declared$/,
+      msg: function (m) {
+        return 'You created <b>' + m[1] + '</b> twice with <b>let</b>.\n' +
+          'Only the first one needs <b>let</b>. After that just write <code>' + m[1] + ' = ...</code> to change it.';
+      }
+    },
+    {
+      test: /^Cannot read propert(?:y|ies) (?:'|of )/,
+      msg: function () {
+        return 'You asked for something inside a box that is empty.\n' +
+          'Usually this means a list is shorter than you thought, or a name was spelled differently when you made it.';
+      }
+    },
+    {
+      test: /^Unexpected end of input$/,
+      msg: function () {
+        return 'Something was opened and never closed.\n' +
+          'Count your <b>{</b> and <b>}</b>, and your <b>(</b> and <b>)</b> — there should be the same number of each.';
+      }
+    },
+    {
+      test: /^Invalid or unexpected token$/,
+      msg: function () {
+        return 'There is a character here JavaScript cannot read.\n' +
+          'Most often it is a quote mark: it needs straight <b>"</b> quotes, and a line of text needs one at each end.';
+      }
+    },
+    {
+      // V8's wording when a call's brackets are left open, e.g. say("hi"
+      test: /^missing \) after argument list$/,
+      msg: function () {
+        return 'A command was opened with <b>(</b> and never closed with <b>)</b>.\n' +
+          'Every <code>say(</code> needs a matching <code>)</code> at the end of the line.';
+      }
+    },
+    {
+      test: /^Invalid left-hand side in assignment$/,
+      msg: function () {
+        return 'The <b>=</b> sign has something on its left that cannot be changed.\n' +
+          'Remember <b>=</b> means "put this in the box", so a box name goes on the left: <code>score = 10</code>, not <code>10 = score</code>.\n' +
+          'If you meant to compare two things, use <b>===</b>.';
+      }
+    },
+    {
+      test: /^Unexpected (?:string|number)$/,
+      msg: function () {
+        return 'A piece of text or a number turned up where JavaScript expected something else.\n' +
+          'Check for a missing <b>+</b> between two pieces, or a missing comma in a list.';
+      }
+    },
+    {
+      test: /^Unexpected token/,
+      msg: function (m, raw) {
+        return 'JavaScript got to a spot it did not expect (' + raw + ').\n' +
+          'Check the line above the highlighted one too — a missing <b>)</b> or a missing <b>;</b> usually shows up on the next line.';
+      }
+    },
+    {
+      test: /^Maximum call stack size exceeded$/,
+      msg: function () {
+        return 'A function kept calling itself and never stopped.\n' +
+          'Look for a function whose own name appears inside it.';
+      }
+    },
+    {
+      test: /^Unexpected identifier/,
+      msg: function () {
+        return 'Two names ended up side by side with nothing joining them.\n' +
+          'Did you miss a <b>+</b> between two pieces, or a comma between two things in a list?';
+      }
+    }
+  ];
+
+  // Words that legitimately sit next to another word inside brackets, e.g.
+  // `for (const c of list)`. If one of these is in the match, the two-words-
+  // side-by-side pattern below is normal JavaScript, not a missing quote.
+  var KEYWORDS = /^(const|let|var|of|in|new|typeof|instanceof|function|return|else|do|while|for|if|await|yield|delete|void|class|extends|case)$/;
+
+  // Forgetting the quotes — say(I am a coder) — makes V8 complain about an
+  // unclosed bracket, which sends a child hunting for a bracket that is
+  // perfectly fine. Spot the real cause and say so instead.
+  function missingQuotesHint(src) {
+    var mask = scanMask(src);
+    var live = '';
+    for (var i = 0; i < src.length; i++) live += mask[i] ? src[i] : ' ';
+
+    var re = /\(\s*([A-Za-z_$][\w$]*(?:[ \t]+[A-Za-z_$][\w$]*)+)\s*[),]/g;
+    var m;
+    while ((m = re.exec(live)) !== null) {
+      var words = m[1].split(/[ \t]+/);
+      var clean = true;
+      for (var w = 0; w < words.length; w++) {
+        if (KEYWORDS.test(words[w])) { clean = false; break; }
+      }
+      if (clean) return words.join(' ');
+    }
+    return null;
+  }
+
+  function friendlyError(err, src) {
+    if (err instanceof ArcadeTimeout || err.name === 'ArcadeTimeout') {
+      return { title: 'Your loop never stopped', body: err.message };
+    }
+
+    if (err && err.name === 'SyntaxError' && typeof src === 'string') {
+      var phrase = missingQuotesHint(src);
+      if (phrase) {
+        return {
+          title: 'JavaScript could not read your code',
+          body: 'It looks like <b>' + phrase.replace(/</g, '&lt;') + '</b> is meant to be words' +
+            ' rather than code. Words need straight quotes around them:\n' +
+            '<code>say("' + phrase.replace(/</g, '&lt;') + '")</code>\n' +
+            'Without the quotes, JavaScript tries to read each word as the name of a box and gets lost.',
+          raw: String(err.message)
+        };
+      }
+    }
+
+    var raw = String(err && err.message || err);
+    for (var i = 0; i < ERROR_RULES.length; i++) {
+      var m = raw.match(ERROR_RULES[i].test);
+      if (m) {
+        return {
+          title: err.name === 'SyntaxError' ? 'JavaScript could not read your code' : 'Something went wrong while running',
+          body: ERROR_RULES[i].msg(m, raw),
+          raw: raw
+        };
+      }
+    }
+    return {
+      title: 'Something went wrong while running',
+      body: 'JavaScript said: <code>' + raw.replace(/</g, '&lt;') + '</code>\n' +
+            'Read it slowly — the name it mentions is usually the clue.',
+      raw: raw
+    };
+  }
+
+  /* ==========================================================================
+     5. Running it
+     ========================================================================== */
+
+  function makeGuard() {
+    var t0 = Date.now();
+    var ticks = 0;
+    var budget = 4000;
+
+    function tick() {
+      // Check the clock every 64 turns. Often enough to catch a slow loop,
+      // rarely enough that the check itself costs nothing noticeable.
+      if ((++ticks & 63) === 0 && Date.now() - t0 > budget) {
+        throw new ArcadeTimeout(
+          'A loop in your code went round and round without ever finishing, so it was stopped.\n' +
+          'Check that the thing the loop is waiting for actually changes inside the loop. ' +
+          'For example <code>while (score &lt; 10)</code> needs a <code>score = score + 1</code> inside it, ' +
+          'or score stays the same forever.'
+        );
+      }
+      if (ticks > 80000000) {
+        throw new ArcadeTimeout('A loop went round tens of millions of times, so it was stopped.');
+      }
+      return true;
+    }
+
+    tick.reset = function (ms) {
+      t0 = Date.now();
+      ticks = 0;
+      if (ms) budget = ms;
+    };
+    return tick;
+  }
+
+  /**
+   * Run a child's code.
+   *
+   * host.onDraw(name, args)  — called for every drawing command (optional)
+   * host.maxLines            — cap on printed lines (default 400)
+   *
+   * Returns a context object:
+   *   { ok, out, draws, error, quotesFixed, frameFns, dragFns, resetGuard, code }
+   */
+  function run(code, host) {
+    host = host || {};
+    var maxLines = host.maxLines || 400;
+
+    var out = [];
+    var draws = [];
+    var frameFns = [];
+    var dragFns = [];
+    var tick = makeGuard();
+
+    function fmt(v) {
+      if (typeof v === 'string') return v;
+      if (v === undefined) return 'undefined';
+      if (v === null) return 'null';
+      if (typeof v === 'number') {
+        // Stop 0.30000000000000004 appearing in a maths lesson.
+        return Number.isInteger(v) ? String(v) : String(Math.round(v * 1e10) / 1e10);
+      }
+      if (Array.isArray(v)) return '[' + v.map(fmt).join(', ') + ']';
+      if (typeof v === 'object') {
+        try { return JSON.stringify(v); } catch (e) { return String(v); }
+      }
+      return String(v);
+    }
+
+    function draw(name, args) {
+      draws.push({ name: name, args: args });
+      if (host.onDraw) host.onDraw(name, args);
+    }
+
+    var api = {
+      say: function () {
+        var parts = [];
+        for (var i = 0; i < arguments.length; i++) parts.push(fmt(arguments[i]));
+        if (out.length < maxLines) out.push(parts.join(' '));
+        else if (out.length === maxLines) out.push('… stopped printing after ' + maxLines + ' lines.');
+      },
+      clear: function () { out.length = 0; draw('clear', []); },
+      randomInt: function (a, b) {
+        a = Math.ceil(a); b = Math.floor(b);
+        return Math.floor(Math.random() * (b - a + 1)) + a;
+      },
+      background: function (colour) { draw('background', [colour]); },
+      rect: function (x, y, w, h, colour) { draw('rect', [x, y, w, h, colour]); },
+      circle: function (x, y, r, colour) { draw('circle', [x, y, r, colour]); },
+      line: function (x1, y1, x2, y2, colour, thickness) {
+        draw('line', [x1, y1, x2, y2, colour, thickness]);
+      },
+      write: function (txt, x, y, size, colour) { draw('write', [txt, x, y, size, colour]); },
+      width: CANVAS_W,
+      height: CANVAS_H,
+      onFrame: function (fn) { if (typeof fn === 'function') frameFns.push(fn); },
+      onDrag: function (fn) { if (typeof fn === 'function') dragFns.push(fn); }
+    };
+
+    var repaired = repairQuotes(code);
+    var src = repaired.text;
+    var ctx = {
+      ok: false, out: out, draws: draws, error: null,
+      quotesFixed: repaired.changed,
+      frameFns: frameFns, dragFns: dragFns,
+      resetGuard: function (ms) { tick.reset(ms); },
+      code: src
+    };
+
+    var transformed;
+    try {
+      var mask = scanMask(src);
+      var declared = findDeclaredNames(src, mask);
+      transformed = guardLoops(src, mask);
+
+      var names = API_NAMES.filter(function (n) { return !declared[n]; });
+      var values = names.map(function (n) { return api[n]; });
+
+      // 'use strict' is on purpose: without it, a typo like `scor = 5` silently
+      // creates a new variable. With it, the child gets a clear error instead.
+      var body = '"use strict";\n' + transformed + '\n';
+      var fn = Function.apply(null, ['__tick', '__iter'].concat(names, [body]));
+
+      function iter(list) {
+        // Wrap a for-of list so each step counts towards the loop guard.
+        var g = {};
+        g[Symbol.iterator] = function () {
+          var inner = list[Symbol.iterator]();
+          return { next: function () { tick(); return inner.next(); } };
+        };
+        return g;
+      }
+
+      fn.apply(null, [tick, iter].concat(values));
+      ctx.ok = true;
+    } catch (err) {
+      ctx.error = friendlyError(err, src);
+      ctx.errorRaw = err;
+    }
+    return ctx;
+  }
+
+  root.ArcadeRunner = {
+    run: run,
+    API_NAMES: API_NAMES,
+    CANVAS_W: CANVAS_W,
+    CANVAS_H: CANVAS_H,
+    repairQuotes: repairQuotes,
+    scanMask: scanMask,
+    guardLoops: guardLoops,
+    findDeclaredNames: findDeclaredNames,
+    friendlyError: friendlyError
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+/* ============================================================================
+   Danny's Code Arcade — the 30 missions
+   ----------------------------------------------------------------------------
+   One object per mission. Every marker (`check`) is only allowed to look at
+   things the runner records, so the same marker works in the browser and in
+   the Node test harness:
+
+     ctx.out        array of printed lines
+     ctx.draws      array of { name, args } for every drawing command
+     ctx.code       the child's source (after curly-quote repair)
+     ctx.frameFns   functions registered with onFrame — a marker may call these
+     ctx.dragFns    functions registered with onDrag
+     ctx.error      friendly error object, or null
+
+   A marker returns { pass: true } or { pass: false, msg: '<html>' }. The msg
+   should say what went wrong in terms of what the child can see, never in
+   terms of JavaScript internals.
+   ========================================================================== */
+
+(function (root) {
+  'use strict';
+
+  /* ---------------------------- marker helpers ---------------------------- */
+
+  // The child's code with every string, comment and template blanked out, so
+  // "I used a loop" written inside say(...) cannot satisfy a "use a loop" rule.
+  function liveCode(ctx) {
+    var mask = root.ArcadeRunner.scanMask(ctx.code);
+    var s = '';
+    for (var i = 0; i < ctx.code.length; i++) s += mask[i] ? ctx.code[i] : ' ';
+    return s;
+  }
+
+  function tidy(s) { return String(s == null ? '' : s).trim().replace(/\s+/g, ' '); }
+
+  // Printed lines, blanks removed.
+  function lines(ctx) {
+    return ctx.out.filter(function (l) { return tidy(l) !== ''; });
+  }
+
+  function saidExactly(ctx, text) {
+    return lines(ctx).some(function (l) {
+      return tidy(l).toLowerCase() === tidy(text).toLowerCase();
+    });
+  }
+
+  function drawsOf(ctx, name) {
+    return ctx.draws.filter(function (d) { return d.name === name; });
+  }
+
+  // Drive an animation forward. The guard is reset before each frame so a long
+  // simulation is not mistaken for a runaway loop. Returns false and records
+  // ctx.frameError if the child's frame code throws, so a marker can explain
+  // it rather than the whole page falling over.
+  function frames(ctx, n) {
+    for (var i = 0; i < n; i++) {
+      ctx.resetGuard(250);
+      for (var f = 0; f < ctx.frameFns.length; f++) {
+        try {
+          ctx.frameFns[f]();
+        } catch (e) {
+          ctx.frameError = root.ArcadeRunner.friendlyError(e);
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  function drag(ctx, x) {
+    for (var i = 0; i < ctx.dragFns.length; i++) {
+      try { ctx.dragFns[i](x); } catch (e) {
+        ctx.frameError = root.ArcadeRunner.friendlyError(e);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Shared failure message for when the animation itself broke.
+  function brokeWhileRunning(ctx) {
+    return {
+      pass: false,
+      msg: 'Your code started fine, but something went wrong once it began' +
+           ' animating:<br>' + (ctx.frameError ? ctx.frameError.body : 'unknown problem')
+    };
+  }
+
+  // Standard failure messages, so the tone stays the same across 30 missions.
+  function wantedLine(text) {
+    return {
+      pass: false,
+      msg: 'I was looking for a line that says exactly <code>' + text + '</code>.' +
+           ' Check your spelling and your spaces — the computer is very fussy.'
+    };
+  }
+  function nothingPrinted() {
+    return { pass: false, msg: 'Nothing was printed. Did you use <code>say(...)</code>?' };
+  }
+  function needsTool(what, why) {
+    return { pass: false, msg: 'This mission needs ' + what + '. ' + why };
+  }
+
+  /* ------------------------------- missions ------------------------------- */
+
+  var LESSONS = [
+
+  /* ===================== UNIT 1 — Making it talk ===================== */
+  {
+    id: 1, unit: 1, unitName: 'Making it talk', title: 'First words',
+    teach:
+      '<p><b>say</b> is how you make the computer talk. You put what you want' +
+      ' it to print inside the round brackets.</p>' +
+      '<p>Words need <b>"straight quotes"</b> around them. The quotes are not' +
+      ' printed — they just tell the computer "this bit is words, not a command".</p>',
+    example: 'say("Hello Danny")',
+    task: 'Make it print exactly:<br><code>I am a coder</code>',
+    starter: '// Type your code on the line below\n',
+    hint: 'Copy the example, then change the words inside the quotes. Keep the quotes!',
+    solution: 'say("I am a coder")',
+    check: function (ctx) {
+      if (lines(ctx).length === 0) return nothingPrinted();
+      if (!saidExactly(ctx, 'I am a coder')) return wantedLine('I am a coder');
+      return { pass: true };
+    }
+  },
+  {
+    id: 2, unit: 1, unitName: 'Making it talk', title: 'One line at a time',
+    teach:
+      '<p>Every <b>say</b> starts a new line, and they happen in the order you' +
+      ' write them — top to bottom, like a recipe.</p>' +
+      '<p>That order matters more than you would think. The computer never' +
+      ' skips ahead and never guesses what you meant.</p>',
+    example: 'say("Ready")\nsay("Steady")\nsay("Go")',
+    task:
+      'Print your three favourite games, one per line.<br>' +
+      'The first line must be <code>FIFA 26</code>. The other two are up to you.',
+    starter: 'say("FIFA 26")\n',
+    hint: 'You need three separate say lines, one under the other.',
+    solution: 'say("FIFA 26")\nsay("Minecraft")\nsay("Roblox")',
+    check: function (ctx) {
+      var L = lines(ctx);
+      if (L.length === 0) return nothingPrinted();
+      if (tidy(L[0]).toLowerCase() !== 'fifa 26') {
+        return { pass: false, msg: 'The first line needs to be exactly <code>FIFA 26</code>. Right now your first line is <code>' + tidy(L[0]) + '</code>.' };
+      }
+      if (L.length < 3) {
+        return { pass: false, msg: 'I can only see ' + L.length + ' line' + (L.length === 1 ? '' : 's') + '. I need three, so you need three <code>say</code> lines.' };
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 3, unit: 1, unitName: 'Making it talk', title: 'Numbers are different',
+    teach:
+      '<p>Numbers do <b>not</b> get quotes. <code>7</code> is a number the' +
+      ' computer can do maths with. <code>"7"</code> is just a shape it prints.</p>' +
+      '<p>You can hand <b>say</b> several things at once by putting commas' +
+      ' between them. It puts a space between each one for you.</p>',
+    example: 'say("Goals this season:", 24)',
+    task:
+      'Print exactly:<br><code>Danny has 3 games</code><br>' +
+      'but the <b>3</b> must be a real number, not inside quotes.',
+    starter: 'say("Danny has", ???, "games")\n',
+    hint: 'Replace the ??? with 3 — no quotes around it.',
+    solution: 'say("Danny has", 3, "games")',
+    check: function (ctx) {
+      if (lines(ctx).length === 0) return nothingPrinted();
+      if (!saidExactly(ctx, 'Danny has 3 games')) return wantedLine('Danny has 3 games');
+      if (!/(^|[^\w.])3([^\w.]|$)/.test(liveCode(ctx))) {
+        return { pass: false, msg: 'That printed the right thing, but the <b>3</b> is still inside the quotes. Take it out so it is a real number: <code>say("Danny has", 3, "games")</code>' };
+      }
+      return { pass: true };
+    }
+  },
+
+  /* ===================== UNIT 2 — Boxes ===================== */
+  {
+    id: 4, unit: 2, unitName: 'Boxes to remember things', title: 'Your first box',
+    teach:
+      '<p>A <b>variable</b> is a box with a name on it. You make one with' +
+      ' <b>let</b>, and after that you can use its name anywhere instead of' +
+      ' the thing inside.</p>' +
+      '<p><i>Variable just means "a thing that can vary" — in other words, a' +
+      ' labelled box whose contents are allowed to change.</i></p>',
+    example: 'let player = "Haaland"\nsay(player)',
+    task: 'Make a box called <code>score</code> with <b>7</b> in it, then print it.',
+    starter: '// Make the box, then say it\n',
+    hint: 'Line one: let score = 7. Line two: say(score) — with no quotes around score.',
+    solution: 'let score = 7\nsay(score)',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/\blet\s+score\b/.test(code)) {
+        return needsTool('a box called <code>score</code>', 'Start the line with <code>let score = </code>');
+      }
+      if (lines(ctx).length === 0) return nothingPrinted();
+      if (!saidExactly(ctx, '7')) {
+        if (saidExactly(ctx, 'score')) {
+          return { pass: false, msg: 'That printed the word <i>score</i> instead of what is in the box. Remove the quotes: <code>say(score)</code>, not <code>say("score")</code>.' };
+        }
+        return wantedLine('7');
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 5, unit: 2, unitName: 'Boxes to remember things', title: 'Changing the box',
+    teach:
+      '<p>You only use <b>let</b> once, when you first make the box. After that' +
+      ' just use its name to put something new in.</p>' +
+      '<p>This line looks strange but is the most useful line in all of coding:</p>' +
+      '<p><code>score = score + 5</code></p>' +
+      '<p>Read it right to left: work out <i>score plus 5</i>, then put the' +
+      ' answer back in <i>score</i>. The box ends up 5 bigger.</p>',
+    example: 'let lives = 3\nlives = lives - 1\nsay(lives)',
+    task:
+      'Start <code>score</code> at <b>10</b>, add <b>5</b> to it, then print it' +
+      ' once.<br>You are not allowed to type 15 anywhere — the computer must do the sum.',
+    starter: 'let score = 10\n',
+    hint: 'Line two changes the box: score = score + 5. Then say(score).',
+    solution: 'let score = 10\nscore = score + 5\nsay(score)',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (/\b15\b/.test(code)) {
+        return { pass: false, msg: 'You typed <b>15</b> yourself. Let the computer work it out: start at 10 and add 5 with <code>score = score + 5</code>.' };
+      }
+      if (!/\blet\s+score\s*=\s*10\b/.test(code)) {
+        return needsTool('<code>let score = 10</code> to start with', 'That is the first line.');
+      }
+      if (lines(ctx).length === 0) return nothingPrinted();
+      if (!saidExactly(ctx, '15')) return wantedLine('15');
+      return { pass: true };
+    }
+  },
+  {
+    id: 6, unit: 2, unitName: 'Boxes to remember things', title: 'Build a FIFA card',
+    teach:
+      '<p>A <b>+</b> between two numbers adds them up. A <b>+</b> between two' +
+      ' pieces of text glues them together instead. That is how you build a' +
+      ' sentence out of boxes.</p>' +
+      '<p>Watch the spaces: <code>"pace" + 97</code> comes out as' +
+      ' <code>pace97</code>, so put the space inside the quotes —' +
+      ' <code>" pace "</code>.</p>',
+    example: 'let name = "Saka"\nsay("Player: " + name)',
+    task:
+      'Make three boxes: <code>name</code> holding <code>"Saka"</code>,' +
+      ' <code>pace</code> holding <b>97</b>, and <code>shooting</code> holding <b>89</b>.<br>' +
+      'Then print one line that says exactly:<br><code>Saka pace 97 shooting 89</code>',
+    starter: 'let name = "Saka"\nlet pace = 97\nlet shooting = 89\n\n// Now build the line with +\n',
+    hint: 'say(name + " pace " + pace + " shooting " + shooting)',
+    solution: 'let name = "Saka"\nlet pace = 97\nlet shooting = 89\nsay(name + " pace " + pace + " shooting " + shooting)',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/\blet\s+name\b/.test(code) || !/\blet\s+pace\b/.test(code) || !/\blet\s+shooting\b/.test(code)) {
+        return needsTool('all three boxes', 'You need <code>name</code>, <code>pace</code> and <code>shooting</code>.');
+      }
+      if (lines(ctx).length === 0) return nothingPrinted();
+      if (!saidExactly(ctx, 'Saka pace 97 shooting 89')) {
+        var got = tidy(lines(ctx)[0]);
+        if (/Saka\s*pace/.test(got) && !/Saka pace/.test(got)) {
+          return { pass: false, msg: 'Very close — your words are stuck together. Put the spaces inside the quotes, like <code>" pace "</code>.' };
+        }
+        return wantedLine('Saka pace 97 shooting 89');
+      }
+      if (!/\+/.test(code)) {
+        return needsTool('the <b>+</b> sign', 'Build the line out of the boxes rather than typing it all out.');
+      }
+      return { pass: true };
+    }
+  },
+
+  /* ===================== UNIT 3 — Maths ===================== */
+  {
+    id: 7, unit: 3, unitName: 'Maths powers', title: 'The four signs',
+    teach:
+      '<p>Coding uses the signs you know, with two swaps: <b>*</b> means times' +
+      ' and <b>/</b> means divide.</p>' +
+      '<p><code>+</code> add &nbsp; <code>-</code> take away &nbsp;' +
+      ' <code>*</code> times &nbsp; <code>/</code> divide</p>' +
+      '<p>Times and divide happen before add and take away, just like in maths' +
+      ' at school. Use round brackets when you want a different order.</p>',
+    example: 'say(6 * 7)\nsay((2 + 3) * 10)',
+    task:
+      'In Minecraft you have <b>3 full stacks</b> of blocks (a stack is 64)' +
+      ' and <b>12</b> loose blocks.<br>' +
+      'Print how many blocks you have altogether. You must use <b>*</b> and' +
+      ' <b>+</b> — do not type the answer yourself.',
+    starter: 'say( )\n',
+    hint: 'Three stacks is 3 * 64. Then add the 12 loose ones.',
+    solution: 'say(3 * 64 + 12)',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (/\b204\b/.test(code)) {
+        return { pass: false, msg: 'You typed the answer in yourself. Make the computer do the sum using <code>3 * 64 + 12</code>.' };
+      }
+      if (!/\*/.test(code)) return needsTool('the <b>*</b> sign', 'Three stacks of 64 is <code>3 * 64</code>.');
+      if (lines(ctx).length === 0) return nothingPrinted();
+      if (!saidExactly(ctx, '204')) {
+        return { pass: false, msg: 'I was expecting <b>204</b> but got <code>' + tidy(lines(ctx)[0]) + '</code>. Three stacks of 64, then add the 12 loose blocks.' };
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 8, unit: 3, unitName: 'Maths powers', title: 'Goal difference',
+    teach:
+      '<p>Boxes and maths work together: anywhere you could write a number, you' +
+      ' can write the name of a box holding a number.</p>' +
+      '<p>That is what makes code worth writing. Change the number at the top' +
+      ' and every sum below updates itself.</p>',
+    example: 'let wins = 12\nlet losses = 5\nsay(wins - losses)',
+    task:
+      'Arsenal scored <b>58</b> and let in <b>31</b>.<br>' +
+      'Put those in two boxes called <code>scored</code> and <code>conceded</code>,' +
+      ' then print the goal difference (scored take away conceded).',
+    starter: 'let scored = 58\nlet conceded = 31\n',
+    hint: 'say(scored - conceded)',
+    solution: 'let scored = 58\nlet conceded = 31\nsay(scored - conceded)',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (/\b27\b/.test(code)) {
+        return { pass: false, msg: 'You typed <b>27</b> yourself. Let the computer subtract: <code>say(scored - conceded)</code>.' };
+      }
+      if (!/\blet\s+scored\b/.test(code) || !/\blet\s+conceded\b/.test(code)) {
+        return needsTool('both boxes', 'Call them <code>scored</code> and <code>conceded</code>.');
+      }
+      if (lines(ctx).length === 0) return nothingPrinted();
+      if (!saidExactly(ctx, '27')) {
+        return { pass: false, msg: 'I was expecting <b>27</b> but got <code>' + tidy(lines(ctx)[0]) + '</code>. Make sure it is scored minus conceded, that way round.' };
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 9, unit: 3, unitName: 'Maths powers', title: 'Shot accuracy',
+    teach:
+      '<p>Dividing often gives a long messy number. <b>Math.round</b> tidies it' +
+      ' to the nearest whole number. The capital M matters.</p>' +
+      '<p><code>Math.round(4.7)</code> gives 5 &nbsp;·&nbsp;' +
+      ' <code>Math.floor(4.7)</code> gives 4 (floor always goes down)</p>' +
+      '<p>There is also <b>randomInt(1, 6)</b>, which rolls a whole number from' +
+      ' 1 to 6. You will use that a lot later.</p>',
+    example: 'say(Math.round(2.5))\nsay(randomInt(1, 6))',
+    task:
+      'A player had <b>17</b> shots and scored <b>5</b>.<br>' +
+      'Print the percentage that went in, rounded to a whole number.<br>' +
+      '<i>A percentage is goals divided by shots, times 100.</i>',
+    starter: 'let shots = 17\nlet goals = 5\n',
+    hint: 'say(Math.round(goals / shots * 100))',
+    solution: 'let shots = 17\nlet goals = 5\nsay(Math.round(goals / shots * 100))',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (/\b29\b/.test(code)) {
+        return { pass: false, msg: 'You typed <b>29</b> yourself. Work it out with <code>Math.round(goals / shots * 100)</code>.' };
+      }
+      if (!/Math\.round/.test(code)) {
+        return needsTool('<b>Math.round</b>', 'Without it you get a long number with a decimal point.');
+      }
+      if (lines(ctx).length === 0) return nothingPrinted();
+      var got = tidy(lines(ctx)[0]);
+      if (got !== '29') {
+        if (/^29\./.test(got)) return { pass: false, msg: 'Right sum, but it has not been rounded. Wrap the whole thing in <code>Math.round( ... )</code>.' };
+        if (got === '340') return { pass: false, msg: 'That is shots divided by goals — the wrong way round. Goals go on top: <code>goals / shots * 100</code>.' };
+        return { pass: false, msg: 'I was expecting <b>29</b> but got <code>' + got + '</code>. It is goals divided by shots, then times 100.' };
+      }
+      return { pass: true };
+    }
+  },
+
+  /* ===================== UNIT 4 — Choices ===================== */
+  {
+    id: 10, unit: 4, unitName: 'Making choices', title: 'if',
+    teach:
+      '<p><b>if</b> lets code decide. The question goes in round brackets and' +
+      ' the thing to do goes in curly brackets. If the answer is no, the curly' +
+      ' brackets are skipped entirely.</p>' +
+      '<p>Watch this one carefully:</p>' +
+      '<p><code>=</code> means "put this in the box"<br>' +
+      '<code>===</code> means "is this the same as that?"</p>' +
+      '<p>Also <code>&gt;</code> bigger than, <code>&lt;</code> smaller than,' +
+      ' <code>&gt;=</code> bigger than or the same.</p>',
+    example: 'let goals = 3\nif (goals > 2) {\n  say("Hat-trick!")\n}',
+    task:
+      'A card has a <code>rating</code> of <b>85</b>.<br>' +
+      'Using <b>if</b>, print <code>Gold card</code> only when the rating is' +
+      ' more than 80.',
+    starter: 'let rating = 85\n\nif ( ) {\n\n}\n',
+    hint: 'The question is rating > 80, and inside the curly brackets goes say("Gold card").',
+    solution: 'let rating = 85\nif (rating > 80) {\n  say("Gold card")\n}',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/\bif\s*\(/.test(code)) return needsTool('an <b>if</b>', 'Print it only when the rating is high enough.');
+      if (!/rating/.test(code)) return needsTool('the <code>rating</code> box', 'Ask the question about <code>rating</code>, not about a number you typed again.');
+      if (lines(ctx).length === 0) {
+        return { pass: false, msg: 'Nothing was printed, so your question must have come out as "no". A rating of 85 <i>is</i> more than 80 — check which way round your <code>&gt;</code> is pointing.' };
+      }
+      if (!saidExactly(ctx, 'Gold card')) return wantedLine('Gold card');
+      return { pass: true };
+    }
+  },
+  {
+    id: 11, unit: 4, unitName: 'Making choices', title: 'if and else',
+    teach:
+      '<p><b>else</b> is the "otherwise" part. Exactly one of the two blocks' +
+      ' runs, never both and never neither.</p>' +
+      '<p>Think of it as a fork in a path: the code always takes one branch.</p>',
+    example:
+      'let lives = 0\nif (lives > 0) {\n  say("Keep playing")\n} else {\n  say("Game over")\n}',
+    task:
+      'A Roblox arena needs <b>level 5</b> or higher to enter.<br>' +
+      'Your <code>level</code> is <b>3</b>. Print <code>You may enter</code> if' +
+      ' the level is high enough, and <code>Train more</code> if it is not.<br>' +
+      '<i>Both messages must be in your code, even though only one gets printed.</i>',
+    starter: 'let level = 3\n\nif ( ) {\n\n} else {\n\n}\n',
+    hint: 'The question is level >= 5. With level 3 the else part is the one that runs.',
+    solution:
+      'let level = 3\nif (level >= 5) {\n  say("You may enter")\n} else {\n  say("Train more")\n}',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/\bif\s*\(/.test(code)) return needsTool('an <b>if</b>', 'See the example above.');
+      if (!/\belse\b/.test(code)) return needsTool('an <b>else</b>', 'That is the "otherwise" half.');
+      if (!/You may enter/.test(ctx.code)) return needsTool('both messages', 'The <code>You may enter</code> message must be in your code too, ready for when the level is high enough.');
+      if (lines(ctx).length === 0) return nothingPrinted();
+      if (lines(ctx).length > 1) {
+        return { pass: false, msg: 'Two lines were printed, but only one should be. Make sure one <code>say</code> is inside the <b>if</b> curly brackets and the other is inside the <b>else</b> ones.' };
+      }
+      if (!saidExactly(ctx, 'Train more')) {
+        if (saidExactly(ctx, 'You may enter')) {
+          return { pass: false, msg: 'Level 3 is not 5 or more, so this should have printed <code>Train more</code>. Your two messages are the wrong way round, or your <code>&gt;=</code> is pointing the wrong way.' };
+        }
+        return wantedLine('Train more');
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 12, unit: 4, unitName: 'Making choices', title: 'Card colours',
+    teach:
+      '<p>For more than two choices, chain them with <b>else if</b>. The' +
+      ' computer tries each question in order and stops at the first "yes".</p>' +
+      '<p>Order is everything here. Put the biggest number first, or a rating' +
+      ' of 95 will match "85 or more" on the way past and never reach Icon.</p>',
+    example:
+      'let n = 5\nif (n > 10) {\n  say("big")\n} else if (n > 3) {\n  say("medium")\n} else {\n  say("small")\n}',
+    task:
+      'A <code>rating</code> of <b>84</b> needs a card colour:<br>' +
+      '90 or more → <code>Icon</code><br>85 or more → <code>Gold</code><br>' +
+      '75 or more → <code>Silver</code><br>anything else → <code>Bronze</code><br>' +
+      'Print the right one. All four words must appear in your code.',
+    starter: 'let rating = 84\n\nif ( ) {\n\n}\n',
+    hint: 'Four outcomes means if, else if, else if, else. Start with 90 and work down.',
+    solution:
+      'let rating = 84\nif (rating >= 90) {\n  say("Icon")\n} else if (rating >= 85) {\n  say("Gold")\n} else if (rating >= 75) {\n  say("Silver")\n} else {\n  say("Bronze")\n}',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      var elseIfs = (code.match(/\belse\s+if\b/g) || []).length;
+      if (elseIfs < 2) return needsTool('at least two <b>else if</b> parts', 'There are four possible answers, so you need a chain.');
+      var words = ['Icon', 'Gold', 'Silver', 'Bronze'];
+      for (var i = 0; i < words.length; i++) {
+        if (ctx.code.indexOf(words[i]) < 0) return needsTool('all four colours in your code', 'I cannot find <code>' + words[i] + '</code>.');
+      }
+      if (lines(ctx).length === 0) return nothingPrinted();
+      if (lines(ctx).length > 1) return { pass: false, msg: 'Only one colour should be printed, but I got ' + lines(ctx).length + ' lines. Each <code>say</code> needs to be inside its own curly brackets.' };
+      if (!saidExactly(ctx, 'Silver')) {
+        return { pass: false, msg: 'A rating of 84 is a <b>Silver</b> card: it is not 90 or more, and not 85 or more, but it is 75 or more. You printed <code>' + tidy(lines(ctx)[0]) + '</code>. Check the order of your questions.' };
+      }
+      return { pass: true };
+    }
+  },
+
+  /* ===================== UNIT 5 — Loops ===================== */
+  {
+    id: 13, unit: 5, unitName: 'Loops', title: 'Doing it again with for',
+    teach:
+      '<p>A <b>loop</b> repeats code so you do not have to type it out. This is' +
+      ' where coding starts to save you real work.</p>' +
+      '<p><code>for (let i = 1; i &lt;= 10; i++)</code> has three parts:</p>' +
+      '<p>1. <code>let i = 1</code> — start the counter at 1<br>' +
+      '2. <code>i &lt;= 10</code> — keep going while this is true<br>' +
+      '3. <code>i++</code> — add one to the counter each time round</p>' +
+      '<p><code>i++</code> is just a short way of writing' +
+      ' <code>i = i + 1</code>.</p>',
+    example: 'for (let i = 1; i <= 3; i++) {\n  say("Round " + i)\n}',
+    task: 'Print the numbers <b>1 to 10</b>, one on each line, using a loop.',
+    starter: 'for (let i = 1; i <= 10; i++) {\n\n}\n',
+    hint: 'Inside the curly brackets, say the counter: say(i)',
+    solution: 'for (let i = 1; i <= 10; i++) {\n  say(i)\n}',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/\bfor\b|\bwhile\b/.test(code)) return needsTool('a loop', 'Ten <code>say</code> lines is the thing loops exist to avoid.');
+      var L = lines(ctx);
+      if (L.length === 0) return nothingPrinted();
+      if (L.length !== 10) {
+        return { pass: false, msg: 'I got ' + L.length + ' lines, but I need exactly 10. Check the counter starts at <b>1</b> and the loop keeps going while <code>i &lt;= 10</code>.' };
+      }
+      for (var i = 0; i < 10; i++) {
+        if (tidy(L[i]) !== String(i + 1)) {
+          return { pass: false, msg: 'Line ' + (i + 1) + ' should be <code>' + (i + 1) + '</code> but it is <code>' + tidy(L[i]) + '</code>.' };
+        }
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 14, unit: 5, unitName: 'Loops', title: 'Seven times table',
+    teach:
+      '<p>The counter is a normal box, so you can do maths with it inside the' +
+      ' loop. That turns one loop into a whole table.</p>' +
+      '<p>Careful when you mix text and maths: <code>"= " + 7 * i</code> works' +
+      ' because times happens before the gluing. If you are ever unsure, put' +
+      ' the sum in its own brackets.</p>',
+    example: 'for (let i = 1; i <= 3; i++) {\n  say("2 x " + i + " = " + 2 * i)\n}',
+    task:
+      'Print the <b>7 times table</b> from 1 to 12.<br>' +
+      'Each line must look exactly like this:<br><code>7 x 3 = 21</code><br>' +
+      '<i>A lower case x, with spaces around the x and around the = sign.</i>',
+    starter: 'for (let i = 1; i <= 12; i++) {\n\n}\n',
+    hint: 'say("7 x " + i + " = " + 7 * i)',
+    solution: 'for (let i = 1; i <= 12; i++) {\n  say("7 x " + i + " = " + 7 * i)\n}',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/\bfor\b|\bwhile\b/.test(code)) return needsTool('a loop', 'Twelve typed-out lines is not the idea here.');
+      var L = lines(ctx);
+      if (L.length === 0) return nothingPrinted();
+      if (L.length !== 12) {
+        return { pass: false, msg: 'I got ' + L.length + ' lines and I need 12 — from 1 up to and including 12. Does your loop say <code>i &lt;= 12</code>?' };
+      }
+      for (var i = 1; i <= 12; i++) {
+        var want = '7 x ' + i + ' = ' + (7 * i);
+        if (tidy(L[i - 1]) !== want) {
+          return { pass: false, msg: 'Line ' + i + ' should be exactly <code>' + want + '</code> but it is <code>' + tidy(L[i - 1]) + '</code>. Check your spaces and use a small <b>x</b>.' };
+        }
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 15, unit: 5, unitName: 'Loops', title: 'while, and the loop that never ends',
+    teach:
+      '<p><b>while</b> is a loop for when you do not know how many turns you' +
+      ' need — only when to stop. <code>while (blocks &gt;= 7)</code> keeps' +
+      ' going until there are fewer than 7 left.</p>' +
+      '<p><b>The classic bug:</b> if nothing inside the loop ever changes the' +
+      ' thing being tested, the loop runs forever. This arcade stops a runaway' +
+      ' loop after four seconds and tells you, instead of freezing — but it is' +
+      ' still a bug, and everyone writes it at least once.</p>',
+    example: 'let fuel = 10\nwhile (fuel > 0) {\n  fuel = fuel - 3\n  say(fuel)\n}',
+    task:
+      'You have <b>100</b> Minecraft blocks and each wall uses <b>7</b>.<br>' +
+      'While you still have at least 7 blocks, build a wall and print how many' +
+      ' blocks are left.<br>' +
+      'When you cannot build any more, print the leftovers like this:' +
+      ' <code>Left over: 2</code>',
+    starter: 'let blocks = 100\n\nwhile ( ) {\n\n}\n',
+    hint: 'Inside the loop: take 7 off blocks, then say(blocks). The last line, outside the loop, prints the leftovers.',
+    solution:
+      'let blocks = 100\nwhile (blocks >= 7) {\n  blocks = blocks - 7\n  say(blocks)\n}\nsay("Left over: " + blocks)',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/\bwhile\s*\(/.test(code)) return needsTool('a <b>while</b> loop', 'This mission is about not knowing the number of turns in advance.');
+      var L = lines(ctx);
+      if (L.length === 0) return nothingPrinted();
+      var last = tidy(L[L.length - 1]);
+      if (L.length !== 15) {
+        if (L.length === 14) {
+          return { pass: false, msg: 'The 14 walls are right, but the leftover line is missing. Add <code>say("Left over: " + blocks)</code> <b>after</b> the closing curly bracket, so it only happens once at the end.' };
+        }
+        return { pass: false, msg: 'I got ' + L.length + ' lines. I expect 14 — one for each wall — and then one leftover line, so 15 in total. Each wall uses 7 blocks out of 100.' };
+      }
+      if (tidy(L[0]) !== '93') {
+        return { pass: false, msg: 'The first line should be <code>93</code> (100 take away 7) but it is <code>' + tidy(L[0]) + '</code>. Take the blocks away <i>before</i> you print.' };
+      }
+      if (tidy(L[13]) !== '2') {
+        return { pass: false, msg: 'The last wall should leave <code>2</code> blocks but your 14th line is <code>' + tidy(L[13]) + '</code>.' };
+      }
+      if (last.toLowerCase() !== 'left over: 2') {
+        return { pass: false, msg: 'The final line should be exactly <code>Left over: 2</code> but it is <code>' + last + '</code>.' };
+      }
+      return { pass: true };
+    }
+  }
+
+  ];
+
+  root.ARCADE_LESSONS = LESSONS;
+  root.ARCADE_HELPERS = {
+    liveCode: liveCode, lines: lines, tidy: tidy, saidExactly: saidExactly,
+    drawsOf: drawsOf, frames: frames, drag: drag,
+    brokeWhileRunning: brokeWhileRunning, nothingPrinted: nothingPrinted,
+    wantedLine: wantedLine, needsTool: needsTool
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+/* ============================================================================
+   Danny's Code Arcade — missions 16 to 30
+   ----------------------------------------------------------------------------
+   Continues the LESSONS array started in the previous file. Units 9 and 10
+   draw and animate, so their markers call the child's frame and drag functions
+   directly and inspect the drawing commands that come out. That means the
+   game missions are really tested, not just scanned for keywords.
+   ========================================================================== */
+
+(function (root) {
+  'use strict';
+
+  var H = root.ARCADE_HELPERS;
+  var liveCode = H.liveCode, lines = H.lines, tidy = H.tidy;
+  var saidExactly = H.saidExactly, drawsOf = H.drawsOf;
+  var frames = H.frames, drag = H.drag;
+  var brokeWhileRunning = H.brokeWhileRunning, nothingPrinted = H.nothingPrinted;
+  var wantedLine = H.wantedLine, needsTool = H.needsTool;
+
+  var SQUAD = '["Saka", "Rice", "Saliba", "Odegaard", "Raya"]';
+
+  // Compare a list of printed lines against what was wanted, and name the
+  // first line that differs — far more useful than "wrong answer".
+  function expectLines(ctx, want) {
+    var L = lines(ctx);
+    if (L.length === 0) return nothingPrinted();
+    if (L.length !== want.length) {
+      return {
+        pass: false,
+        msg: 'I got ' + L.length + ' line' + (L.length === 1 ? '' : 's') +
+             ' but I need exactly ' + want.length + '.'
+      };
+    }
+    for (var i = 0; i < want.length; i++) {
+      if (tidy(L[i]).toLowerCase() !== tidy(want[i]).toLowerCase()) {
+        return {
+          pass: false,
+          msg: 'Line ' + (i + 1) + ' should be <code>' + want[i] +
+               '</code> but it is <code>' + tidy(L[i]) + '</code>.'
+        };
+      }
+    }
+    return { pass: true };
+  }
+
+  function needsLoop(ctx) {
+    return /\bfor\b|\bwhile\b/.test(liveCode(ctx));
+  }
+
+  var MORE = [
+
+  /* ===================== UNIT 6 — Lists ===================== */
+  {
+    id: 16, unit: 6, unitName: 'Lists', title: 'A squad in one box',
+    teach:
+      '<p>An <b>array</b> is one box holding many things in order. You make one' +
+      ' with square brackets and commas.</p>' +
+      '<p>You get a thing out by its position in square brackets — but' +
+      ' <b>counting starts at 0</b>, not 1. So <code>squad[0]</code> is the' +
+      ' first player. That trips up everybody at first.</p>' +
+      '<p><code>squad.length</code> tells you how many there are. Since' +
+      ' counting starts at 0, the last one is always' +
+      ' <code>squad[squad.length - 1]</code>.</p>',
+    example: 'let pets = ["cat", "dog"]\nsay(pets.length)\nsay(pets[0])',
+    task:
+      'The squad is already in your editor.<br>Print three lines:<br>' +
+      '1. how many players there are, using <code>.length</code><br>' +
+      '2. the first player<br>' +
+      '3. the last player, using <code>squad.length - 1</code>',
+    starter: 'let squad = ' + SQUAD + '\n',
+    hint: 'say(squad.length), then say(squad[0]), then say(squad[squad.length - 1])',
+    solution:
+      'let squad = ' + SQUAD + '\nsay(squad.length)\nsay(squad[0])\nsay(squad[squad.length - 1])',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/\.length/.test(code)) {
+        return needsTool('<code>.length</code>', 'Let the computer count the players rather than typing 5.');
+      }
+      var r = expectLines(ctx, ['5', 'Saka', 'Raya']);
+      if (!r.pass) return r;
+      if (!/length\s*-\s*1/.test(code)) {
+        return { pass: false, msg: 'All three lines are right, but the last player needs to be found with <code>squad[squad.length - 1]</code>. That way it still works if you add another player.' };
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 17, unit: 6, unitName: 'Lists', title: 'Go through the whole list',
+    teach:
+      '<p>Lists and loops belong together. <b>for ... of</b> hands you each' +
+      ' item in turn without you having to count at all:</p>' +
+      '<p><code>for (const player of squad) { ... }</code></p>' +
+      '<p>Inside the loop, <code>player</code> is whichever one you are up to.' +
+      ' <b>const</b> is like <b>let</b> but means "this will not change", which' +
+      ' is true here because each turn gets a fresh one.</p>',
+    example: 'let pets = ["cat", "dog"]\nfor (const p of pets) {\n  say("I like my " + p)\n}',
+    task:
+      'Print the squad as a numbered list, exactly like this:<br>' +
+      '<code>1. Saka</code><br><code>2. Rice</code><br>…and so on to 5.',
+    starter: 'let squad = ' + SQUAD + '\nlet n = 1\n\nfor (const player of squad) {\n\n}\n',
+    hint: 'Inside the loop: say(n + ". " + player) and then n = n + 1 to move the number on.',
+    solution:
+      'let squad = ' + SQUAD + '\nlet n = 1\nfor (const player of squad) {\n  say(n + ". " + player)\n  n = n + 1\n}',
+    check: function (ctx) {
+      if (!needsLoop(ctx)) return needsTool('a loop', 'Five typed-out lines would miss the point of this mission.');
+      return expectLines(ctx, ['1. Saka', '2. Rice', '3. Saliba', '4. Odegaard', '5. Raya']);
+    }
+  },
+  {
+    id: 18, unit: 6, unitName: 'Lists', title: 'Total, average, best',
+    teach:
+      '<p>Three jobs you will do forever: add a list up, work out the average,' +
+      ' and find the biggest.</p>' +
+      '<p>The pattern for all three is the same. Make a box before the loop,' +
+      ' update it on every turn, then use it after the loop has finished.</p>' +
+      '<p>For the biggest, start your box at the first item, then each turn ask' +
+      ' "is this one bigger than my box?" and swap it in if so.</p>',
+    example:
+      'let nums = [4, 9, 2]\nlet total = 0\nfor (const n of nums) {\n  total = total + n\n}\nsay(total)',
+    task:
+      'The ratings are in your editor. Print three lines:<br>' +
+      '1. the total of all five<br>2. the average, rounded<br>3. the highest rating<br>' +
+      'The computer must work all three out — no typing answers in.',
+    starter: 'let ratings = [87, 91, 78, 84, 90]\nlet total = 0\n\n',
+    hint: 'Add them up in a loop first. The average is total / ratings.length. For the highest, keep a "best so far" box.',
+    solution:
+      'let ratings = [87, 91, 78, 84, 90]\nlet total = 0\nlet best = ratings[0]\nfor (const r of ratings) {\n  total = total + r\n  if (r > best) {\n    best = r\n  }\n}\nsay(total)\nsay(Math.round(total / ratings.length))\nsay(best)',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!needsLoop(ctx)) return needsTool('a loop', 'All three answers come from going through the list once.');
+      if (/\b430\b/.test(code)) {
+        return { pass: false, msg: 'You typed the total <b>430</b> in yourself. Add the ratings up in the loop instead.' };
+      }
+      if (!/>/.test(code)) {
+        return needsTool('a <b>&gt;</b> comparison', 'Finding the highest means asking "is this one bigger than my best so far?"');
+      }
+      return expectLines(ctx, ['430', '86', '91']);
+    }
+  },
+
+  /* ===================== UNIT 7 — Your own commands ===================== */
+  {
+    id: 19, unit: 7, unitName: 'Your own commands', title: 'Teach it a new word',
+    teach:
+      '<p>A <b>function</b> is your own command. You write the instructions' +
+      ' once, give them a name, and then run them whenever you like by writing' +
+      ' the name with round brackets after it.</p>' +
+      '<p>Writing the function does not run it. Nothing happens until you' +
+      ' <i>call</i> it — that is the bit that catches people out.</p>',
+    example:
+      'function cheer() {\n  say("Come on!")\n}\n\ncheer()\ncheer()',
+    task:
+      'Write a function called <code>greet</code> that prints' +
+      ' <code>Welcome to the arcade</code>.<br>Then call it <b>twice</b>, so the' +
+      ' message appears on two lines.',
+    starter: 'function greet() {\n\n}\n\n// Now call it twice\n',
+    hint: 'Inside the curly brackets goes the say line. Then on two lines below, write greet() and greet().',
+    solution:
+      'function greet() {\n  say("Welcome to the arcade")\n}\n\ngreet()\ngreet()',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/function\s+greet\s*\(/.test(code)) {
+        return needsTool('a function called <code>greet</code>', 'Write <code>function greet() { ... }</code>.');
+      }
+      var L = lines(ctx);
+      if (L.length === 0) {
+        return { pass: false, msg: 'Nothing was printed. You have written the function but never called it — add <code>greet()</code> on its own line below.' };
+      }
+      if (L.length === 1) {
+        return { pass: false, msg: 'Only one line appeared, so <code>greet()</code> is only being called once. Call it twice.' };
+      }
+      return expectLines(ctx, ['Welcome to the arcade', 'Welcome to the arcade']);
+    }
+  },
+  {
+    id: 20, unit: 7, unitName: 'Your own commands', title: 'Commands that take something',
+    teach:
+      '<p>A function gets much more useful when you hand it something to work' +
+      ' with. The name in the brackets is a <b>parameter</b> — an empty box that' +
+      ' gets filled in with whatever you pass when you call it.</p>' +
+      '<p>So <code>shoot("Saka")</code> runs the function with' +
+      ' <code>player</code> holding "Saka" just for that one run.</p>',
+    example:
+      'function shout(word) {\n  say(word + "!!!")\n}\n\nshout("goal")\nshout("save")',
+    task:
+      'Write a function <code>shoot(player)</code> that prints the player\'s name' +
+      ' followed by <code> scores!</code><br>' +
+      'Call it for <b>Saka</b>, then <b>Rice</b>, then <b>Saliba</b>, giving:<br>' +
+      '<code>Saka scores!</code><br><code>Rice scores!</code><br><code>Saliba scores!</code>',
+    starter: 'function shoot(player) {\n\n}\n\n',
+    hint: 'say(player + " scores!") — note the space before the word scores, inside the quotes.',
+    solution:
+      'function shoot(player) {\n  say(player + " scores!")\n}\n\nshoot("Saka")\nshoot("Rice")\nshoot("Saliba")',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/function\s+shoot\s*\(\s*[A-Za-z_$]/.test(code)) {
+        return needsTool('a function <code>shoot(player)</code> with a parameter', 'The name inside the round brackets is what makes it reusable.');
+      }
+      var L = lines(ctx);
+      if (L.length === 0) {
+        return { pass: false, msg: 'Nothing was printed — the function exists but has not been called. Add <code>shoot("Saka")</code> and the other two below it.' };
+      }
+      return expectLines(ctx, ['Saka scores!', 'Rice scores!', 'Saliba scores!']);
+    }
+  },
+  {
+    id: 21, unit: 7, unitName: 'Your own commands', title: 'Commands that answer back',
+    teach:
+      '<p><b>return</b> sends an answer back out of a function, so you can use' +
+      ' the result wherever you like instead of printing it straight away.</p>' +
+      '<p><code>return</code> also stops the function immediately. Anything' +
+      ' written after it never runs — which is handy, because it means you do' +
+      ' not always need <b>else</b>.</p>',
+    example:
+      'function double(n) {\n  return n * 2\n}\n\nsay(double(7))',
+    task:
+      'Write <code>cardColour(rating)</code> that <b>returns</b>:<br>' +
+      '<code>Gold</code> for 85 or more, <code>Silver</code> for 75 or more,' +
+      ' otherwise <code>Bronze</code>.<br>' +
+      'Then print the colour for <b>92</b>, then <b>80</b>, then <b>60</b>.',
+    starter: 'function cardColour(rating) {\n\n}\n\nsay(cardColour(92))\n',
+    hint: 'Inside: if (rating >= 85) { return "Gold" } then the same shape for 75, then a plain return "Bronze" at the end.',
+    solution:
+      'function cardColour(rating) {\n  if (rating >= 85) {\n    return "Gold"\n  }\n  if (rating >= 75) {\n    return "Silver"\n  }\n  return "Bronze"\n}\n\nsay(cardColour(92))\nsay(cardColour(80))\nsay(cardColour(60))',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/function\s+cardColour\s*\(\s*[A-Za-z_$]/.test(code)) {
+        return needsTool('a function <code>cardColour(rating)</code>', 'Spelled exactly like that, with a capital C in Colour.');
+      }
+      if (!/\breturn\b/.test(code)) {
+        return needsTool('<b>return</b>', 'This function hands the colour back instead of printing it. The <code>say</code> happens outside.');
+      }
+      var L = lines(ctx);
+      if (L.length === 0) {
+        return { pass: false, msg: 'Nothing was printed. Call it three times: <code>say(cardColour(92))</code> and so on.' };
+      }
+      if (L.length === 3 && tidy(L[0]).toLowerCase() === 'undefined') {
+        return { pass: false, msg: 'All three came out as <code>undefined</code>, which means the function finished without returning anything. Check you wrote <code>return "Gold"</code> and not <code>say("Gold")</code>.' };
+      }
+      return expectLines(ctx, ['Gold', 'Silver', 'Bronze']);
+    }
+  },
+
+  /* ===================== UNIT 8 — Objects ===================== */
+  {
+    id: 22, unit: 8, unitName: 'Objects', title: 'One box, labelled inside',
+    teach:
+      '<p>An array keeps things in order. An <b>object</b> gives each thing its' +
+      ' own label, which is much better when they mean different things.</p>' +
+      '<p>You make one with curly brackets and <code>label: value</code> pairs,' +
+      ' and you get at a piece with a dot:</p>' +
+      '<p><code>player.pace</code></p>' +
+      '<p>Think of an array as a numbered list and an object as a form with' +
+      ' named fields.</p>',
+    example:
+      'let pet = { name: "Rex", age: 4 }\nsay(pet.name)\nsay(pet.age)',
+    task:
+      'Make an object called <code>player</code> with a <code>name</code> of' +
+      ' <code>"Saka"</code>, a <code>pace</code> of <b>97</b> and a' +
+      ' <code>shooting</code> of <b>89</b>.<br>' +
+      'Then print exactly:<br><code>Saka has pace 97</code>',
+    starter: 'let player = {\n  name: "Saka",\n  pace: 97,\n  shooting: 89\n}\n\n',
+    hint: 'say(player.name + " has pace " + player.pace)',
+    solution:
+      'let player = {\n  name: "Saka",\n  pace: 97,\n  shooting: 89\n}\n\nsay(player.name + " has pace " + player.pace)',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/\blet\s+player\s*=\s*\{/.test(code)) {
+        return needsTool('an object called <code>player</code>', 'It starts <code>let player = {</code>');
+      }
+      if (!/player\.name/.test(code) || !/player\.pace/.test(code)) {
+        return needsTool('<code>player.name</code> and <code>player.pace</code>', 'Build the line out of the object rather than retyping the words.');
+      }
+      if (lines(ctx).length === 0) return nothingPrinted();
+      if (!saidExactly(ctx, 'Saka has pace 97')) return wantedLine('Saka has pace 97');
+      return { pass: true };
+    }
+  },
+  {
+    id: 23, unit: 8, unitName: 'Objects', title: 'A whole squad of objects',
+    teach:
+      '<p>Now put the two together: an array <i>of</i> objects. This is how real' +
+      ' apps hold almost everything — a list of players, messages, high scores.</p>' +
+      '<p>Loop through the array and use a dot on each one as you go.</p>',
+    example:
+      'let pets = [{ name: "Rex", age: 4 }, { name: "Mo", age: 2 }]\nfor (const p of pets) {\n  say(p.name + " is " + p.age)\n}',
+    task:
+      'Print one line per player, exactly like this:<br>' +
+      '<code>Saka - 87</code><br><code>Rice - 85</code><br><code>Saliba - 86</code><br>' +
+      '<i>That is a space, a dash, a space.</i>',
+    starter:
+      'let squad = [\n  { name: "Saka", rating: 87 },\n  { name: "Rice", rating: 85 },\n  { name: "Saliba", rating: 86 }\n]\n\n',
+    hint: 'for (const p of squad) { say(p.name + " - " + p.rating) }',
+    solution:
+      'let squad = [\n  { name: "Saka", rating: 87 },\n  { name: "Rice", rating: 85 },\n  { name: "Saliba", rating: 86 }\n]\n\nfor (const p of squad) {\n  say(p.name + " - " + p.rating)\n}',
+    check: function (ctx) {
+      if (!needsLoop(ctx)) return needsTool('a loop', 'Go through the squad rather than writing three say lines.');
+      if (!/\.name/.test(liveCode(ctx))) {
+        return needsTool('the dot, like <code>p.name</code>', 'That is how you reach inside each object.');
+      }
+      return expectLines(ctx, ['Saka - 87', 'Rice - 85', 'Saliba - 86']);
+    }
+  },
+  {
+    id: 24, unit: 8, unitName: 'Objects', title: 'Loot box odds',
+    teach:
+      '<p>Time to use randomness properly. <code>randomInt(1, 100)</code> gives' +
+      ' a whole number from 1 to 100, each equally likely.</p>' +
+      '<p>If you call it 100 times and count how often it lands on 10 or less,' +
+      ' you get roughly 10 — because 10 out of 100 numbers qualify. Run it' +
+      ' again and you will get a slightly different answer, and that is' +
+      ' exactly how real loot box odds work.</p>',
+    example:
+      'let sixes = 0\nfor (let i = 0; i < 10; i++) {\n  if (randomInt(1, 6) === 6) {\n    sixes = sixes + 1\n  }\n}\nsay("Sixes: " + sixes)',
+    task:
+      'Open <b>100</b> Roblox loot boxes. A box is <b>rare</b> if' +
+      ' <code>randomInt(1, 100)</code> comes out as <b>10 or less</b>.<br>' +
+      'Count the rare ones and print exactly one line like:<br>' +
+      '<code>Rare: 12</code><br>' +
+      '<i>Your number will be different every time you run it. That is correct.</i>',
+    starter: 'let rare = 0\n\nfor (let i = 0; i < 100; i++) {\n\n}\n\n',
+    hint: 'Inside the loop: if (randomInt(1, 100) <= 10) { rare = rare + 1 }. Print after the loop.',
+    solution:
+      'let rare = 0\nfor (let i = 0; i < 100; i++) {\n  if (randomInt(1, 100) <= 10) {\n    rare = rare + 1\n  }\n}\nsay("Rare: " + rare)',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (!/randomInt\s*\(/.test(code)) {
+        return needsTool('<b>randomInt</b>', 'The whole mission is about a number you cannot predict.');
+      }
+      if (!needsLoop(ctx)) return needsTool('a loop', 'One hundred boxes is a job for a loop.');
+      if (!/\b100\b/.test(code)) {
+        return needsTool('the number <b>100</b>', 'You are opening 100 boxes.');
+      }
+      var L = lines(ctx);
+      if (L.length === 0) return nothingPrinted();
+      if (L.length > 1) {
+        return { pass: false, msg: 'I got ' + L.length + ' lines but I need just one. Your <code>say</code> is inside the loop — move it below the closing curly bracket so it runs once at the end.' };
+      }
+      var m = tidy(L[0]).match(/^Rare:\s*(\d+)$/i);
+      if (!m) return wantedLine('Rare: 12');
+      var n = Number(m[1]);
+      if (n > 100) {
+        return { pass: false, msg: 'You counted ' + n + ' rare boxes out of 100, which cannot be right. Is <code>rare = rare + 1</code> perhaps outside the <b>if</b>?' };
+      }
+      return { pass: true };
+    }
+  },
+
+  /* ===================== UNIT 9 — Drawing ===================== */
+  {
+    id: 25, unit: 9, unitName: 'Drawing', canvas: true, title: 'Your first picture',
+    teach:
+      '<p>Now for pictures. The drawing area is <b>320 across and 320 down</b>,' +
+      ' and you can use <code>width</code> and <code>height</code> instead of' +
+      ' typing 320.</p>' +
+      '<p><b>The surprise:</b> position 0,0 is the <i>top</i> left, and y gets' +
+      ' bigger as you go <b>down</b>. Upside down compared to maths graphs.</p>' +
+      '<p><code>background("skyblue")</code> fills everything<br>' +
+      '<code>circle(x, y, size, colour)</code> — x and y are the middle<br>' +
+      '<code>rect(x, y, across, down, colour)</code> — x and y are the top left<br>' +
+      '<code>line(x1, y1, x2, y2, colour, thickness)</code><br>' +
+      '<code>write("hi", x, y, size, colour)</code></p>',
+    example: 'background("skyblue")\ncircle(50, 50, 30, "gold")',
+    task:
+      'Fill the background with any colour you like, then draw a circle right in' +
+      ' the <b>middle</b> of the picture.<br>' +
+      '<i>The middle across is half of 320, and the middle down is the same.</i>',
+    starter: 'background("skyblue")\n\n',
+    hint: 'circle(160, 160, 50, "gold") — or use width / 2 and height / 2 instead of 160.',
+    solution: 'background("skyblue")\ncircle(160, 160, 50, "gold")',
+    check: function (ctx) {
+      if (drawsOf(ctx, 'background').length === 0) {
+        return needsTool('a <b>background</b>', 'Start with <code>background("skyblue")</code> or any colour you like.');
+      }
+      var circles = drawsOf(ctx, 'circle');
+      if (circles.length === 0) {
+        return needsTool('a <b>circle</b>', 'Use <code>circle(x, y, size, colour)</code>.');
+      }
+      var centred = circles.filter(function (c) {
+        return Math.abs(c.args[0] - 160) <= 25 && Math.abs(c.args[1] - 160) <= 25;
+      });
+      if (centred.length === 0) {
+        var c0 = circles[0];
+        return {
+          pass: false,
+          msg: 'Your circle is at <code>' + c0.args[0] + ', ' + c0.args[1] + '</code>' +
+               ' but the middle is <code>160, 160</code>. Remember the first number is across and the second is down.'
+        };
+      }
+      if (!centred.some(function (c) { return c.args[2] >= 15; })) {
+        return { pass: false, msg: 'It is in the right place but very small. Give it a size of about 50.' };
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 26, unit: 9, unitName: 'Drawing', canvas: true, title: 'A row of coins',
+    teach:
+      '<p>Loops and drawing together is where this gets fun. Use the counter in' +
+      ' the position, and one loop draws a whole pattern.</p>' +
+      '<p><code>20 + i * 40</code> gives 20, 60, 100, 140… — evenly spaced,' +
+      ' because each turn adds another 40.</p>',
+    example:
+      'for (let i = 0; i < 4; i++) {\n  circle(40 + i * 60, 100, 20, "red")\n}',
+    task:
+      'Draw a row of <b>8 gold coins</b> across the middle of the picture, using' +
+      ' a loop.<br>Space them out so they reach most of the way across.',
+    starter: 'background("midnightblue")\n\nfor (let i = 0; i < 8; i++) {\n\n}\n',
+    hint: 'circle(20 + i * 40, 160, 15, "gold") — the i makes each one land further right.',
+    solution:
+      'background("midnightblue")\nfor (let i = 0; i < 8; i++) {\n  circle(20 + i * 40, 160, 15, "gold")\n}',
+    check: function (ctx) {
+      if (!needsLoop(ctx)) return needsTool('a loop', 'Eight separate circle lines is the slow way.');
+      var circles = drawsOf(ctx, 'circle');
+      if (circles.length === 0) return needsTool('some <b>circles</b>', 'Use <code>circle(x, y, size, colour)</code> inside the loop.');
+      if (circles.length !== 8) {
+        return { pass: false, msg: 'I counted ' + circles.length + ' coins and I need exactly 8. Check your loop: <code>i &lt; 8</code> gives 8 turns, counting 0 to 7.' };
+      }
+      var xs = circles.map(function (c) { return c.args[0]; });
+      var ys = circles.map(function (c) { return c.args[1]; });
+      var spread = Math.max.apply(null, xs) - Math.min.apply(null, xs);
+      if (spread < 150) {
+        return { pass: false, msg: 'All 8 coins are drawn but they are bunched up (only ' + Math.round(spread) + ' pixels apart in total). Multiply the counter by a bigger number, like <code>i * 40</code>.' };
+      }
+      if (Math.max.apply(null, ys) - Math.min.apply(null, ys) > 60) {
+        return { pass: false, msg: 'They should be in a straight row, so the <b>down</b> number should be the same for every coin. Only the across number needs the <code>i</code> in it.' };
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 27, unit: 9, unitName: 'Drawing', canvas: true, title: 'Build a Minecraft wall',
+    teach:
+      '<p>A loop <i>inside</i> another loop gives you a grid. The outer one' +
+      ' counts rows, the inner one counts along each row — exactly how you read' +
+      ' a page.</p>' +
+      '<p>New sign: <b>%</b> gives the <i>remainder</i> after dividing.' +
+      ' <code>7 % 2</code> is 1, <code>8 % 2</code> is 0. So' +
+      ' <code>(row + col) % 2 === 0</code> is true on every other block — which' +
+      ' is how you get a checked pattern.</p>',
+    example:
+      'for (let row = 0; row < 2; row++) {\n  for (let col = 0; col < 3; col++) {\n    rect(col * 50, row * 50, 50, 50, "green")\n  }\n}',
+    task:
+      'Build a wall <b>6 blocks across and 4 blocks down</b>, each block 40 by 40.<br>' +
+      'Use <b>two different colours</b> in a checked pattern with <code>%</code>.<br>' +
+      '<i>That is 24 blocks in total, and you should not type rect more than once.</i>',
+    starter:
+      'background("skyblue")\n\nfor (let row = 0; row < 4; row++) {\n  for (let col = 0; col < 6; col++) {\n\n  }\n}\n',
+    hint: 'Pick a colour with an if on (row + col) % 2 === 0, then rect(40 + col * 40, 80 + row * 40, 40, 40, colour).',
+    solution:
+      'background("skyblue")\nfor (let row = 0; row < 4; row++) {\n  for (let col = 0; col < 6; col++) {\n    let colour = "sienna"\n    if ((row + col) % 2 === 0) {\n      colour = "peru"\n    }\n    rect(40 + col * 40, 80 + row * 40, 40, 40, colour)\n  }\n}',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      var loops = (code.match(/\bfor\b/g) || []).length;
+      if (loops < 2) {
+        return needsTool('two loops, one inside the other', 'The outer one counts the 4 rows, the inner one the 6 blocks along.');
+      }
+      if (!/%/.test(code)) {
+        return needsTool('the <b>%</b> sign', 'That is what makes every other block a different colour.');
+      }
+      var rects = drawsOf(ctx, 'rect');
+      if (rects.length === 0) return needsTool('some <b>rect</b> blocks', 'Use <code>rect(x, y, across, down, colour)</code> inside the inner loop.');
+      if (rects.length !== 24) {
+        return { pass: false, msg: 'I counted ' + rects.length + ' blocks and a 6 by 4 wall needs 24. Check both loops: <code>col &lt; 6</code> and <code>row &lt; 4</code>.' };
+      }
+      var colours = {};
+      rects.forEach(function (r) { colours[String(r.args[4])] = true; });
+      if (Object.keys(colours).length < 2) {
+        return { pass: false, msg: 'All 24 blocks came out the same colour. The <b>if</b> on <code>(row + col) % 2 === 0</code> needs to change which colour you pass to <code>rect</code>.' };
+      }
+      var xs = rects.map(function (r) { return r.args[0]; });
+      var ys = rects.map(function (r) { return r.args[1]; });
+      if (Math.max.apply(null, xs) - Math.min.apply(null, xs) < 150) {
+        return { pass: false, msg: 'The blocks are stacked on top of each other instead of spread across. The <b>across</b> position needs the column counter in it, like <code>col * 40</code>.' };
+      }
+      if (Math.max.apply(null, ys) - Math.min.apply(null, ys) < 90) {
+        return { pass: false, msg: 'Every block is on the same row. The <b>down</b> position needs the row counter in it, like <code>row * 40</code>.' };
+      }
+      return { pass: true };
+    }
+  },
+
+  /* ===================== UNIT 10 — Coin Catcher ===================== */
+  {
+    id: 28, unit: 10, unitName: 'Coin Catcher', canvas: true, title: 'Make it move',
+    teach:
+      '<p>A game is just a picture redrawn about 60 times a second, with' +
+      ' everything moved slightly. <b>onFrame</b> hands you that:</p>' +
+      '<p><code>onFrame(function () { ... })</code></p>' +
+      '<p>Everything in there happens on every single frame. Boxes you made' +
+      ' <i>outside</i> it keep their value between frames — that is what lets' +
+      ' something remember where it was.</p>' +
+      '<p>Always redraw the background first, or everything smears across the' +
+      ' screen like a paint roller.</p>',
+    example:
+      'let x = 0\nonFrame(function () {\n  background("black")\n  circle(x, 100, 20, "red")\n  x = x + 2\n})',
+    task:
+      'Make a gold coin <b>fall</b> from the top of the screen.<br>' +
+      'Every frame: redraw the background, draw the coin, then move it down a' +
+      ' few pixels.<br>' +
+      'When it goes below the bottom, send it back to the top so it falls again' +
+      ' and again.',
+    starter:
+      'let y = 0\n\nonFrame(function () {\n  background("skyblue")\n\n})\n',
+    hint: 'Inside: circle(160, y, 15, "gold"), then y = y + 3, then if (y > height) { y = 0 }',
+    solution:
+      'let y = 0\n\nonFrame(function () {\n  background("skyblue")\n  circle(160, y, 15, "gold")\n  y = y + 3\n  if (y > height) {\n    y = 0\n  }\n})',
+    check: function (ctx) {
+      if (ctx.frameFns.length === 0) {
+        return needsTool('<b>onFrame</b>', 'Nothing can move without it. Wrap your drawing in <code>onFrame(function () { ... })</code>.');
+      }
+      // Ten frames: is the coin going downwards, and is the background redrawn?
+      ctx.draws.length = 0;
+      if (!frames(ctx, 10)) return brokeWhileRunning(ctx);
+      var circles = drawsOf(ctx, 'circle');
+      if (circles.length === 0) {
+        return needsTool('a <b>circle</b> for the coin', 'Draw it inside the onFrame function so it appears on every frame.');
+      }
+      if (drawsOf(ctx, 'background').length < 5) {
+        return { pass: false, msg: 'The background is not being redrawn every frame, so the coin will leave a smear behind it. Put <code>background(...)</code> as the first line inside <code>onFrame</code>.' };
+      }
+      var firstY = circles[0].args[1];
+      var lastY = circles[circles.length - 1].args[1];
+      if (lastY <= firstY) {
+        if (circles[0].args[0] !== circles[circles.length - 1].args[0]) {
+          return { pass: false, msg: 'The coin is moving sideways, not down. In <code>circle(x, y, ...)</code> the <b>second</b> number is the one that moves it down.' };
+        }
+        return { pass: false, msg: 'The coin is not moving. Does the line <code>y = y + 3</code> appear inside the onFrame function, and is <code>y</code> made with <code>let</code> <b>outside</b> it?' };
+      }
+      // Long run: does it come back to the top instead of vanishing forever?
+      ctx.draws.length = 0;
+      if (!frames(ctx, 1200)) return brokeWhileRunning(ctx);
+      var ys = drawsOf(ctx, 'circle').map(function (c) { return c.args[1]; });
+      var wrapped = false;
+      for (var i = 1; i < ys.length; i++) {
+        if (ys[i] < ys[i - 1] - 50) { wrapped = true; break; }
+      }
+      if (!wrapped) {
+        return { pass: false, msg: 'The coin falls, but it never comes back. Add <code>if (y &gt; height) { y = 0 }</code> inside the onFrame function so it starts again from the top.' };
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 29, unit: 10, unitName: 'Coin Catcher', canvas: true, title: 'The paddle',
+    teach:
+      '<p><b>onDrag</b> tells you where a finger is on the picture:</p>' +
+      '<p><code>onDrag(function (x) { ... })</code></p>' +
+      '<p>The <code>x</code> is how far across the finger is. Store it in a box' +
+      ' and have your onFrame draw the paddle there.</p>' +
+      '<p>Take half the paddle\'s width off, so the finger ends up in the' +
+      ' <i>middle</i> of the paddle rather than at its left edge.</p>',
+    example:
+      'let px = 100\nonDrag(function (x) {\n  px = x - 30\n})',
+    task:
+      'Keep your falling coin, and add two things:<br>' +
+      '1. a <b>paddle</b> — a <code>rect</code> near the bottom that slides left' +
+      ' and right to follow the finger<br>' +
+      '2. a score on screen using <code>write("Score: " + score, ...)</code>' +
+      ' (it can stay at 0 for now)',
+    starter:
+      'let y = 0\nlet paddleX = 130\nlet score = 0\n\nonDrag(function (x) {\n\n})\n\nonFrame(function () {\n  background("midnightblue")\n  circle(160, y, 12, "gold")\n  y = y + 3\n  if (y > height) {\n    y = 0\n  }\n\n})\n',
+    hint: 'In onDrag: paddleX = x - 30. In onFrame: rect(paddleX, 290, 60, 14, "orangered") and the write line.',
+    solution:
+      'let y = 0\nlet paddleX = 130\nlet score = 0\n\nonDrag(function (x) {\n  paddleX = x - 30\n})\n\nonFrame(function () {\n  background("midnightblue")\n  circle(160, y, 12, "gold")\n  y = y + 3\n  if (y > height) {\n    y = 0\n  }\n  rect(paddleX, 290, 60, 14, "orangered")\n  write("Score: " + score, 10, 24, 18, "white")\n})',
+    check: function (ctx) {
+      if (ctx.frameFns.length === 0) return needsTool('<b>onFrame</b>', 'Keep the falling coin from the last mission.');
+      if (ctx.dragFns.length === 0) {
+        return needsTool('<b>onDrag</b>', 'Without it the paddle cannot know where the finger is.');
+      }
+
+      // Find the paddle: the lowest rectangle drawn in a single frame.
+      function paddleAfterDrag(x) {
+        if (!drag(ctx, x)) return null;
+        ctx.draws.length = 0;
+        if (!frames(ctx, 1)) return null;
+        var rects = drawsOf(ctx, 'rect');
+        if (rects.length === 0) return undefined;
+        return rects.reduce(function (lowest, r) {
+          return (lowest === null || r.args[1] > lowest.args[1]) ? r : lowest;
+        }, null);
+      }
+
+      var left = paddleAfterDrag(60);
+      if (left === null) return brokeWhileRunning(ctx);
+      if (left === undefined) {
+        return needsTool('a <b>rect</b> for the paddle', 'Draw it inside <code>onFrame</code> so it is redrawn every frame.');
+      }
+      if (left.args[1] < 200) {
+        return { pass: false, msg: 'Your paddle is drawn at ' + left.args[1] + ' from the top, which is up in the middle of the screen. Put it near the bottom, around 290.' };
+      }
+
+      var right = paddleAfterDrag(260);
+      if (right === null) return brokeWhileRunning(ctx);
+
+      if (right.args[0] - left.args[0] < 100) {
+        if (Math.abs(right.args[0] - left.args[0]) < 2) {
+          return { pass: false, msg: 'The paddle does not move when the finger does. Your <code>onDrag</code> needs to store the finger position in the same box that <code>rect</code> uses for its across position.' };
+        }
+        return { pass: false, msg: 'The paddle moves, but not as far as the finger. Set the box straight to the finger position rather than nudging it a little.' };
+      }
+      if (right.args[0] < left.args[0]) {
+        return { pass: false, msg: 'The paddle moves the wrong way — dragging right sends it left. Check for a minus sign in front of the <code>x</code>.' };
+      }
+      if (drawsOf(ctx, 'write').length === 0) {
+        return needsTool('the score on screen with <b>write</b>', 'Add <code>write("Score: " + score, 10, 24, 18, "white")</code> inside onFrame.');
+      }
+      return { pass: true };
+    }
+  },
+  {
+    id: 30, unit: 10, unitName: 'Coin Catcher', canvas: true, title: 'Finish the game',
+    teach:
+      '<p>Last one. A game needs three more things: a reason to try, a way to' +
+      ' lose, and an end.</p>' +
+      '<p><b>Catching:</b> the coin is caught when it reaches the paddle\'s row' +
+      ' <i>and</i> its across position is between the paddle\'s two edges. Join' +
+      ' two questions with <b>&amp;&amp;</b>, which means "and".</p>' +
+      '<p><b>Missing:</b> if it gets past the bottom, take a life away.</p>' +
+      '<p><b>Ending:</b> when lives hit 0, stop moving the coin and' +
+      ' <code>write</code> the words <code>Game over</code>.</p>' +
+      '<p>Send the coin back to the top at a <b>random</b> across position each' +
+      ' time, with <code>randomInt</code>, so it is never the same twice.</p>',
+    example:
+      'if (coinY > 270 && coinX > paddleX && coinX < paddleX + 60) {\n  score = score + 1\n}',
+    task:
+      'Finish Coin Catcher:<br>' +
+      '• catching a coin adds <b>1</b> to the score<br>' +
+      '• missing one costs a life, starting from <b>3</b><br>' +
+      '• every new coin appears at a <b>random</b> position across, using' +
+      ' <code>randomInt</code><br>' +
+      '• show the score and the lives with <code>write</code><br>' +
+      '• at 0 lives, <code>write</code> the words <code>Game over</code> and' +
+      ' stop the coin<br><br>' +
+      'Then play it. You built this.',
+    starter:
+      'let coinX = randomInt(20, width - 20)\nlet coinY = 0\nlet paddleX = 130\nlet score = 0\nlet lives = 3\n\nonDrag(function (x) {\n  paddleX = x - 30\n})\n\nonFrame(function () {\n  background("midnightblue")\n\n  if (lives > 0) {\n    coinY = coinY + 3\n\n    // Did the paddle catch it?\n\n    // Did it get past the bottom?\n\n  }\n\n  circle(coinX, coinY, 12, "gold")\n  rect(paddleX, 290, 60, 14, "orangered")\n\n  // Show the score and the lives\n\n  // And if lives is 0, say so\n})\n',
+    hint:
+      'Catch: if (coinY > 270 && coinX > paddleX && coinX < paddleX + 60) { score = score + 1; coinY = 0; coinX = randomInt(20, width - 20) }. ' +
+      'Miss: if (coinY > height) { lives = lives - 1; coinY = 0; coinX = randomInt(20, width - 20) }.',
+    solution:
+      'let coinX = randomInt(20, width - 20)\nlet coinY = 0\nlet paddleX = 130\nlet score = 0\nlet lives = 3\n\nonDrag(function (x) {\n  paddleX = x - 30\n})\n\nonFrame(function () {\n  background("midnightblue")\n\n  if (lives > 0) {\n    coinY = coinY + 3\n\n    if (coinY > 270 && coinX > paddleX && coinX < paddleX + 60) {\n      score = score + 1\n      coinY = 0\n      coinX = randomInt(20, width - 20)\n    }\n\n    if (coinY > height) {\n      lives = lives - 1\n      coinY = 0\n      coinX = randomInt(20, width - 20)\n    }\n  }\n\n  circle(coinX, coinY, 12, "gold")\n  rect(paddleX, 290, 60, 14, "orangered")\n  write("Score: " + score, 10, 24, 18, "white")\n  write("Lives: " + lives, 215, 24, 18, "white")\n\n  if (lives === 0) {\n    write("Game over", 60, 170, 34, "white")\n  }\n})',
+    check: function (ctx) {
+      var code = liveCode(ctx);
+      if (ctx.frameFns.length === 0) return needsTool('<b>onFrame</b>', 'Keep everything from the last mission.');
+      if (ctx.dragFns.length === 0) return needsTool('<b>onDrag</b>', 'The paddle still needs to follow the finger.');
+      if (!/randomInt\s*\(/.test(code)) {
+        return needsTool('<b>randomInt</b>', 'Each new coin should appear somewhere different across the screen.');
+      }
+      if (!/&&/.test(code)) {
+        return needsTool('<b>&amp;&amp;</b>', 'Catching the coin means two things being true at once: it has reached the paddle row, and it is between the paddle edges.');
+      }
+
+      // Park the paddle hard left, then let plenty of coins fall. Almost all of
+      // them will be missed, so three lives should run out and the game should
+      // declare itself over.
+      if (!drag(ctx, 0)) return brokeWhileRunning(ctx);
+      ctx.draws.length = 0;
+      if (!frames(ctx, 4000)) return brokeWhileRunning(ctx);
+
+      var writes = drawsOf(ctx, 'write').map(function (d) { return String(d.args[0]); });
+      if (writes.length === 0) {
+        return needsTool('<b>write</b> on the screen', 'Show the score and the lives inside onFrame.');
+      }
+      if (!writes.some(function (t) { return /score/i.test(t); })) {
+        return needsTool('the score shown with <b>write</b>', 'Something like <code>write("Score: " + score, 10, 24, 18, "white")</code>.');
+      }
+      if (!writes.some(function (t) { return /lives/i.test(t); })) {
+        return needsTool('the lives shown with <b>write</b>', 'Something like <code>write("Lives: " + lives, 215, 24, 18, "white")</code>.');
+      }
+      if (!writes.some(function (t) { return /game\s*over/i.test(t); })) {
+        return {
+          pass: false,
+          msg: 'I slid the paddle to the far left and let dozens of coins fall past it,' +
+               ' but the game never ended. Check that missing a coin does' +
+               ' <code>lives = lives - 1</code>, and that there is an' +
+               ' <code>if (lives === 0)</code> that writes <code>Game over</code>.'
+        };
+      }
+      return { pass: true };
+    }
+  }
+
+  ];
+
+  for (var i = 0; i < MORE.length; i++) root.ARCADE_LESSONS.push(MORE[i]);
+})(typeof window !== 'undefined' ? window : globalThis);
+/* ============================================================================
+   Danny's Code Arcade — the app
+   ----------------------------------------------------------------------------
+   Wires the runner and the missions to the page: the mission map, the editor,
+   the canvas, the animation loop, and the marking.
+   ========================================================================== */
+
+(function () {
+  'use strict';
+
+  var R = window.ArcadeRunner;
+  var LESSONS = window.ARCADE_LESSONS;
+  var W = R.CANVAS_W, H = R.CANVAS_H;
+  var FF = '"Avenir Next", Avenir, system-ui, "Helvetica Neue", sans-serif';
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  // Marker and error text is written with \n for paragraph breaks and may
+  // contain a few safe tags (b, code, br) that we put through as-is.
+  function richText(s) { return String(s).replace(/\n/g, '<br>'); }
+
+  /* ========================================================================
+     Saved progress
+     ------------------------------------------------------------------------
+     Wrapped in try/catch throughout: in a private window, or inside some
+     preview panes, localStorage throws on access. Losing saved progress is
+     survivable; a blank screen is not.
+     ====================================================================== */
+
+  var store = {
+    get: function (key, fallback) {
+      try {
+        var v = window.localStorage.getItem('arcade.' + key);
+        return v === null ? fallback : JSON.parse(v);
+      } catch (e) { return fallback; }
+    },
+    set: function (key, value) {
+      try { window.localStorage.setItem('arcade.' + key, JSON.stringify(value)); }
+      catch (e) { /* nothing we can do, and nothing that should break the page */ }
+    },
+    clear: function () {
+      try {
+        var keys = [];
+        for (var i = 0; i < window.localStorage.length; i++) {
+          var k = window.localStorage.key(i);
+          if (k && k.indexOf('arcade.') === 0) keys.push(k);
+        }
+        keys.forEach(function (k) { window.localStorage.removeItem(k); });
+      } catch (e) {}
+    }
+  };
+
+  function doneList() {
+    var d = store.get('done', []);
+    return Array.isArray(d) ? d : [];
+  }
+  function isDone(id) { return doneList().indexOf(id) >= 0; }
+  function markDone(id) {
+    var d = doneList();
+    if (d.indexOf(id) < 0) { d.push(id); store.set('done', d); }
+  }
+  function highestDone() {
+    return doneList().reduce(function (a, b) { return Math.max(a, b); }, 0);
+  }
+  function maxUnlocked() { return Math.min(LESSONS.length, highestDone() + 1); }
+
+  /* ========================================================================
+     The canvas
+     ====================================================================== */
+
+  var canvas = $('canvas');
+  var c2d = canvas.getContext('2d');
+
+  function sizeCanvas() {
+    // Draw at device resolution but keep the child's coordinates in 0–320,
+    // so a circle at 160,160 is in the middle whatever the screen.
+    var dpr = Math.min(3, window.devicePixelRatio || 1);
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    c2d.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  sizeCanvas();
+
+  function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
+  function colour(v, fallback) {
+    return (typeof v === 'string' && v.trim() !== '') ? v : (fallback || '#FFC233');
+  }
+
+  function blankCanvas() {
+    c2d.save();
+    c2d.setTransform(1, 0, 0, 1, 0, 0);
+    c2d.clearRect(0, 0, canvas.width, canvas.height);
+    c2d.restore();
+    c2d.fillStyle = '#0A1F19';
+    c2d.fillRect(0, 0, W, H);
+  }
+
+  function paint(name, args) {
+    switch (name) {
+      case 'clear':
+        blankCanvas();
+        break;
+      case 'background':
+        c2d.fillStyle = colour(args[0], '#0A1F19');
+        c2d.fillRect(0, 0, W, H);
+        break;
+      case 'rect':
+        c2d.fillStyle = colour(args[4]);
+        c2d.fillRect(num(args[0]), num(args[1]), num(args[2]), num(args[3]));
+        break;
+      case 'circle':
+        c2d.beginPath();
+        c2d.arc(num(args[0]), num(args[1]), Math.max(0, num(args[2])), 0, Math.PI * 2);
+        c2d.fillStyle = colour(args[3]);
+        c2d.fill();
+        break;
+      case 'line':
+        c2d.beginPath();
+        c2d.moveTo(num(args[0]), num(args[1]));
+        c2d.lineTo(num(args[2]), num(args[3]));
+        c2d.strokeStyle = colour(args[4]);
+        c2d.lineWidth = args[5] == null ? 3 : Math.max(1, num(args[5]));
+        c2d.lineCap = 'round';
+        c2d.stroke();
+        break;
+      case 'write':
+        c2d.fillStyle = colour(args[4], '#F2F7F4');
+        c2d.font = '700 ' + (args[3] == null ? 20 : Math.max(6, num(args[3]))) + 'px ' + FF;
+        c2d.textBaseline = 'alphabetic';
+        c2d.fillText(String(args[0]), num(args[1]), num(args[2]));
+        break;
+    }
+  }
+
+  /* ========================================================================
+     The editor: a textarea sitting exactly on top of a highlighted copy
+     ====================================================================== */
+
+  var code = $('code'), highlight = $('highlight'), gutter = $('gutter');
+  var LH = parseFloat(getComputedStyle(document.documentElement)
+    .getPropertyValue('--code-lh')) || 26;
+  var PAD = 24;   // 12px top + 12px bottom, matching the CSS
+
+  var KEYWORDS = {};
+  ('let const var if else for while do function return true false null undefined ' +
+   'break continue of in new typeof class').split(' ')
+    .forEach(function (k) { KEYWORDS[k] = true; });
+
+  var APINAMES = { Math: true };
+  R.API_NAMES.forEach(function (n) { APINAMES[n] = true; });
+
+  function highlightCode(src) {
+    var out = '', last = 0, m;
+    var re = /(\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*"?|'(?:[^'\\\n]|\\.)*'?)|(\b\d+(?:\.\d+)?)|([A-Za-z_$][\w$]*)/g;
+    while ((m = re.exec(src)) !== null) {
+      out += esc(src.slice(last, m.index));
+      if (m[1]) out += '<span class="t-com">' + esc(m[1]) + '</span>';
+      else if (m[2]) out += '<span class="t-str">' + esc(m[2]) + '</span>';
+      else if (m[3]) out += '<span class="t-num">' + esc(m[3]) + '</span>';
+      else if (KEYWORDS[m[4]]) out += '<span class="t-key">' + m[4] + '</span>';
+      else if (APINAMES[m[4]]) out += '<span class="t-api">' + m[4] + '</span>';
+      else out += esc(m[4]);
+      last = re.lastIndex;
+    }
+    return out + esc(src.slice(last));
+  }
+
+  function refreshEditor() {
+    var src = code.value;
+    var count = src.split('\n').length;
+    var shown = Math.max(6, count);
+
+    highlight.innerHTML = highlightCode(src) + '\n';
+
+    var nums = '';
+    for (var i = 1; i <= shown; i++) nums += i + (i < shown ? '\n' : '');
+    gutter.textContent = nums;
+
+    // A few px of slack so rounding never clips the last line. The highlight
+    // layer is sized by inset:0 from this box, so it must not be set here.
+    code.style.height = (shown * LH + PAD + 4) + 'px';
+
+    saveDraft();
+  }
+
+  code.addEventListener('input', refreshEditor);
+  code.addEventListener('scroll', function () {
+    highlight.scrollTop = code.scrollTop;
+    highlight.scrollLeft = code.scrollLeft;
+  });
+
+  function insertAtCursor(text) {
+    var s = code.selectionStart, e = code.selectionEnd;
+    code.value = code.value.slice(0, s) + text + code.value.slice(e);
+    code.focus();
+    code.selectionStart = code.selectionEnd = s + text.length;
+    refreshEditor();
+  }
+
+  // Tab indents instead of jumping away, and Enter keeps your place in the
+  // nesting — on a tablet keyboard, hunting for spaces is miserable.
+  code.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Tab') {
+      ev.preventDefault();
+      insertAtCursor('  ');
+      return;
+    }
+    if (ev.key === 'Enter') {
+      var pos = code.selectionStart;
+      var lineStart = code.value.lastIndexOf('\n', pos - 1) + 1;
+      var currentLine = code.value.slice(lineStart, pos);
+      var indent = (currentLine.match(/^[ \t]*/) || [''])[0];
+      if (/[{([]\s*$/.test(currentLine)) indent += '  ';
+      ev.preventDefault();
+      insertAtCursor('\n' + indent);
+    }
+  });
+
+  var SYMBOLS = ['(', ')', '{', '}', '[', ']', '"', '=', '===', '+', '-', '*',
+                 '/', '<', '>', '>=', '<=', '%', '&&', '⇥'];
+  (function buildSymbolRow() {
+    var row = $('symbol-row');
+    SYMBOLS.forEach(function (sym) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = sym;
+      b.setAttribute('aria-label', sym === '⇥' ? 'Indent' : 'Insert ' + sym);
+      b.addEventListener('click', function () {
+        insertAtCursor(sym === '⇥' ? '  ' : sym);
+      });
+      row.appendChild(b);
+    });
+  })();
+
+  /* ========================================================================
+     Running the child's code
+     ====================================================================== */
+
+  var current = null;      // the lesson being worked on, or null in free play
+  var freeMode = false;
+  var animHandle = null;
+  var liveCtx = null;
+
+  function stopAnimation() {
+    if (animHandle !== null) {
+      cancelAnimationFrame(animHandle);
+      animHandle = null;
+    }
+  }
+
+  function startAnimation(ctx) {
+    stopAnimation();
+    if (!ctx.frameFns.length) return;
+    function step() {
+      ctx.resetGuard(250);
+      for (var i = 0; i < ctx.frameFns.length; i++) {
+        try {
+          ctx.frameFns[i]();
+        } catch (err) {
+          stopAnimation();
+          showResult('bad', 'It stopped while running',
+            R.friendlyError(err, ctx.code).body);
+          return;
+        }
+      }
+      animHandle = requestAnimationFrame(step);
+    }
+    animHandle = requestAnimationFrame(step);
+  }
+
+  // A finger or mouse on the canvas becomes an x position in the child's
+  // 0–320 coordinates.
+  function canvasX(ev) {
+    var box = canvas.getBoundingClientRect();
+    var x = (ev.clientX - box.left) * (W / box.width);
+    return Math.max(0, Math.min(W, x));
+  }
+  function sendDrag(ev) {
+    if (!liveCtx || !liveCtx.dragFns.length) return;
+    ev.preventDefault();
+    var x = canvasX(ev);
+    for (var i = 0; i < liveCtx.dragFns.length; i++) {
+      try { liveCtx.dragFns[i](x); } catch (e) { /* reported by the frame loop */ }
+    }
+  }
+  var dragging = false;
+  canvas.addEventListener('pointerdown', function (ev) { dragging = true; sendDrag(ev); });
+  canvas.addEventListener('pointermove', function (ev) { if (dragging) sendDrag(ev); });
+  canvas.addEventListener('pointerup', function () { dragging = false; });
+  canvas.addEventListener('pointercancel', function () { dragging = false; });
+  canvas.addEventListener('pointerleave', function () { dragging = false; });
+
+  function showOutput(ctx) {
+    var out = $('output');
+    if (ctx.out.length === 0) {
+      out.innerHTML = ctx.draws.length
+        ? '<span class="empty">Your picture is above.</span>'
+        : '<span class="empty">Your code ran, but nothing was printed. Use say(...) to show something.</span>';
+    } else {
+      out.textContent = ctx.out.join('\n');
+    }
+  }
+
+  function showResult(kind, title, body) {
+    var box = $('result');
+    box.className = 'result ' + kind;
+    box.innerHTML = '<h3>' + title + '</h3><p>' + richText(body) + '</p>';
+    box.hidden = false;
+  }
+  function hideResult() { $('result').hidden = true; }
+
+  // Run the code and hand back the context, or null if it would not run.
+  function runCode() {
+    stopAnimation();
+    blankCanvas();
+    hideResult();
+
+    var ctx = R.run(code.value, { onDraw: paint });
+    liveCtx = ctx;
+
+    if (!ctx.ok) {
+      showOutput(ctx);
+      showResult('bad', ctx.error.title, ctx.error.body);
+      return null;
+    }
+    showOutput(ctx);
+    if (ctx.quotesFixed) {
+      showResult('note', 'Your quotes were straightened out',
+        'The iPad keyboard likes to turn <code>"</code> into curly quotes, which' +
+        ' JavaScript will not accept. I swapped them back for you this time —' +
+        ' nothing for you to fix.');
+    }
+    startAnimation(ctx);
+    return ctx;
+  }
+
+  $('btn-run').addEventListener('click', function () { runCode(); });
+
+  $('btn-check').addEventListener('click', function () {
+    if (!current) return;
+    var ctx = runCode();
+    if (!ctx) return;              // it did not even run; the error is already up
+
+    var res;
+    try {
+      res = current.check(ctx);
+    } catch (e) {
+      showResult('bad', 'The marker could not read that',
+        'Something unusual happened while checking your answer. Tap <b>Run it</b>' +
+        ' to see what your code does, and try the hint.');
+      return;
+    }
+
+    // Marking may have driven the animation forward; put the picture back to
+    // what the child's code actually draws, then let it run again.
+    if (ctx.frameFns.length) startAnimation(ctx);
+
+    if (res.pass) {
+      var first = !isDone(current.id);
+      markDone(current.id);
+      var last = current.id === LESSONS.length;
+      showResult('good', last ? 'That is all thirty. You built a game.' : 'Correct',
+        last
+          ? 'Coin Catcher is yours — you wrote every line of it. Free play is on the' +
+            ' map if you want to keep building.'
+          : (first ? 'Mission ' + current.id + ' is done. Mission ' +
+                     (current.id + 1) + ' is unlocked.'
+                   : 'Still correct. Mission ' + (current.id + 1) + ' is waiting.'));
+      $('btn-next').hidden = last;
+      renderMap();
+      if (first) stampBadge(current.id);
+    } else {
+      showResult('bad', 'Not yet', res.msg || 'That is not quite it. Try the hint.');
+    }
+  });
+
+  $('btn-hint').addEventListener('click', function () {
+    if (!current) return;
+    var box = $('hint-box');
+    box.innerHTML = '<div class="hint-title">Hint</div><div>' +
+      richText(current.hint) + '</div>';
+    box.hidden = false;
+  });
+
+  $('btn-solution').addEventListener('click', function () {
+    if (!current) return;
+    if (!window.confirm('This shows the finished answer. Have a go at the hint first?\n\nTap OK to see it anyway.')) return;
+    var box = $('hint-box');
+    box.innerHTML = '<div class="hint-title">One way to do it</div><pre>' +
+      esc(current.solution) + '</pre>' +
+      '<div style="margin-top:10px;color:var(--chalk-dim);font-size:15px">' +
+      'Type it out rather than copying it — your fingers remember what your eyes skip.</div>';
+    box.hidden = false;
+  });
+
+  /* ========================================================================
+     Drafts — so leaving a mission does not lose the work
+     ====================================================================== */
+
+  function draftKey() { return freeMode ? 'draft.free' : 'draft.' + (current ? current.id : 0); }
+  var saveTimer = null;
+  function saveDraft() {
+    if (!current && !freeMode) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { store.set(draftKey(), code.value); }, 400);
+  }
+
+  /* ========================================================================
+     Screens
+     ====================================================================== */
+
+  var SCREENS = ['home', 'mission', 'sheet'];
+  function show(name) {
+    SCREENS.forEach(function (s) { $('screen-' + s).hidden = (s !== name); });
+    window.scrollTo(0, 0);
+    if (name !== 'mission') stopAnimation();
+  }
+
+  // `force` is only passed by the screenshot hook at the bottom of this file;
+  // normal navigation always respects the lock.
+  function openMission(id, force) {
+    var lesson = LESSONS.filter(function (l) { return l.id === id; })[0];
+    if (!lesson) return;
+    if (!force && id > maxUnlocked()) return;
+
+    current = lesson;
+    freeMode = false;
+    $('screen-mission').classList.remove('free-mode');
+
+    $('mission-pill').textContent = 'Mission ' + lesson.id;
+    $('mission-unit').textContent = lesson.unitName;
+    $('mission-title').textContent = lesson.title;
+    $('mission-teach').innerHTML = lesson.teach;
+    $('mission-example').textContent = lesson.example || '';
+    $('example-box').hidden = !lesson.example;
+    $('mission-task').innerHTML = lesson.task;
+
+    $('hint-box').hidden = true;
+    hideResult();
+    $('btn-check').hidden = false;
+    $('btn-prev').hidden = lesson.id === 1;
+    $('btn-next').hidden = !isDone(lesson.id) || lesson.id === LESSONS.length;
+    $('canvas-wrap').hidden = !lesson.canvas;
+
+    var saved = store.get('draft.' + lesson.id, null);
+    code.value = (typeof saved === 'string' && saved.trim() !== '') ? saved : lesson.starter;
+
+    blankCanvas();
+    $('output').innerHTML = '<span class="empty">Nothing yet. Tap Run it.</span>';
+    refreshEditor();
+    show('mission');
+  }
+
+  function openFreePlay() {
+    current = null;
+    freeMode = true;
+    $('screen-mission').classList.add('free-mode');
+    $('mission-pill').textContent = 'Free play';
+    $('mission-unit').textContent = 'Build whatever you like';
+    $('btn-check').hidden = true;
+    $('btn-prev').hidden = true;
+    $('btn-next').hidden = true;
+    $('canvas-wrap').hidden = false;
+    $('hint-box').hidden = true;
+    hideResult();
+
+    var saved = store.get('draft.free', null);
+    code.value = (typeof saved === 'string' && saved !== '') ? saved
+      : 'background("midnightblue")\n\nfor (let i = 0; i < 8; i++) {\n  circle(20 + i * 40, 160, 15, "gold")\n}\n\nsay("Change anything you like.")\n';
+
+    blankCanvas();
+    $('output').innerHTML = '<span class="empty">Nothing yet. Tap Run it.</span>';
+    refreshEditor();
+    show('mission');
+  }
+
+  $('btn-prev').addEventListener('click', function () {
+    if (current && current.id > 1) openMission(current.id - 1);
+  });
+  $('btn-next').addEventListener('click', function () {
+    if (current && current.id < LESSONS.length) openMission(current.id + 1);
+  });
+
+  document.addEventListener('click', function (ev) {
+    var t = ev.target && ev.target.closest ? ev.target.closest('[data-go]') : null;
+    if (!t) return;
+    var where = t.getAttribute('data-go');
+    if (where === 'home') { renderMap(); show('home'); }
+    else if (where === 'sheet') show('sheet');
+    else if (where === 'free') openFreePlay();
+  });
+
+  $('btn-reset').addEventListener('click', function () {
+    if (!window.confirm('This wipes all thirty ticks and every bit of code you have written. Are you sure?')) return;
+    store.clear();
+    renderMap();
+    show('home');
+  });
+
+  /* ========================================================================
+     The map
+     ====================================================================== */
+
+  function stampBadge(id) {
+    var el = document.querySelector('.badge[data-id="' + id + '"]');
+    if (!el) return;
+    el.classList.add('stamp');
+    setTimeout(function () { el.classList.remove('stamp'); }, 400);
+  }
+
+  function renderMap() {
+    var done = doneList();
+    var unlocked = maxUnlocked();
+
+    $('done-count').textContent = String(done.length);
+    var blocks = '';
+    for (var i = 1; i <= LESSONS.length; i++) {
+      blocks += '<i class="' + (done.indexOf(i) >= 0 ? 'on' : '') + '"></i>';
+    }
+    $('progress-blocks').innerHTML = blocks;
+
+    var resume = $('btn-resume');
+    if (done.length === 0) resume.textContent = 'Start mission 1';
+    else if (done.length === LESSONS.length) resume.textContent = 'Play Coin Catcher again';
+    else resume.textContent = 'Carry on with mission ' + unlocked;
+
+    // group the missions into their units
+    var units = [];
+    LESSONS.forEach(function (l) {
+      var u = units.filter(function (x) { return x.unit === l.unit; })[0];
+      if (!u) { u = { unit: l.unit, name: l.unitName, items: [] }; units.push(u); }
+      u.items.push(l);
+    });
+
+    var html = '';
+    units.forEach(function (u) {
+      html += '<div class="unit"><div class="unit-head">' +
+        '<span class="unit-no">' + u.unit + '</span>' +
+        '<h3 class="unit-name">' + esc(u.name) + '</h3></div><div class="badges">';
+      u.items.forEach(function (l) {
+        var state = done.indexOf(l.id) >= 0 ? 'done'
+          : (l.id === unlocked && done.length < LESSONS.length ? 'next'
+          : (l.id <= unlocked ? '' : 'locked'));
+        var locked = state === 'locked';
+        html += '<button class="badge ' + state + '" data-id="' + l.id + '"' +
+          (locked ? ' disabled aria-disabled="true"' : '') + '>' +
+          '<span class="n">' + l.id + '</span>' +
+          '<span class="t">' + esc(l.title) + '</span>' +
+          (locked ? '<span class="lock"><svg viewBox="0 0 24 24">' +
+            '<rect x="4" y="10" width="16" height="11" rx="2"/>' +
+            '<path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>' : '') +
+          '</button>';
+      });
+      html += '</div></div>';
+    });
+    $('map').innerHTML = html;
+  }
+
+  $('map').addEventListener('click', function (ev) {
+    var b = ev.target && ev.target.closest ? ev.target.closest('.badge') : null;
+    if (!b || b.disabled) return;
+    openMission(Number(b.getAttribute('data-id')));
+  });
+
+  $('btn-resume').addEventListener('click', function () {
+    var done = doneList();
+    openMission(done.length === LESSONS.length ? LESSONS.length : maxUnlocked());
+  });
+
+  /* ========================================================================
+     Cheat sheet
+     ====================================================================== */
+
+  var SHEET = [
+    ['Making it talk', [
+      ['say("hello")', 'Print a line of words.'],
+      ['say("Goals:", 3)', 'Print several things with spaces between them.'],
+      ['clear()', 'Wipe everything printed so far.']
+    ]],
+    ['Boxes', [
+      ['let score = 0', 'Make a box. Only use let the first time.'],
+      ['score = score + 1', 'Put something new in the box.'],
+      ['const pi = 3.14', 'A box that is never allowed to change.']
+    ]],
+    ['Maths', [
+      ['+  -  *  /', 'Add, take away, times, divide.'],
+      ['17 % 5', 'The remainder after dividing: 2.'],
+      ['Math.round(4.7)', 'Nearest whole number: 5.'],
+      ['Math.floor(4.7)', 'Always rounds down: 4.'],
+      ['randomInt(1, 6)', 'A whole number from 1 to 6.']
+    ]],
+    ['Choices', [
+      ['if (a > b) { }', 'Do it only when the question is true.'],
+      ['} else { }', 'Otherwise do this instead.'],
+      ['} else if (a > c) { }', 'Another question to try next.'],
+      ['===   !==', 'Is the same as. Is not the same as.'],
+      ['>  <  >=  <=', 'Bigger, smaller, bigger-or-same, smaller-or-same.'],
+      ['&&   ||', 'And. Or.']
+    ]],
+    ['Loops', [
+      ['for (let i = 0; i < 5; i++) { }', 'Repeat 5 times, counting 0 to 4.'],
+      ['while (score < 10) { }', 'Repeat until the question stops being true.'],
+      ['for (const x of list) { }', 'Once for every thing in a list.']
+    ]],
+    ['Lists', [
+      ['let squad = ["Saka", "Rice"]', 'A list of things in order.'],
+      ['squad[0]', 'The first one. Counting starts at 0.'],
+      ['squad.length', 'How many there are.'],
+      ['squad[squad.length - 1]', 'The last one.'],
+      ['squad.push("Raya")', 'Add one to the end.']
+    ]],
+    ['Your own commands', [
+      ['function greet() { }', 'Make a new command.'],
+      ['greet()', 'Run it. Writing it is not enough.'],
+      ['function double(n) { }', 'n is filled in when you call it.'],
+      ['return n * 2', 'Hand an answer back, and stop.']
+    ]],
+    ['Objects', [
+      ['let p = { name: "Saka", pace: 97 }', 'One box with labelled parts.'],
+      ['p.name', 'Reach inside with a dot.'],
+      ['p.pace = 98', 'Change one part.']
+    ]],
+    ['Drawing', [
+      ['background("skyblue")', 'Fill the whole picture.'],
+      ['circle(x, y, size, "gold")', 'x and y are the middle of it.'],
+      ['rect(x, y, across, down, "red")', 'x and y are the top left corner.'],
+      ['line(x1, y1, x2, y2, "white", 3)', 'From one point to another.'],
+      ['write("Score", x, y, 20, "white")', 'Words on the picture.'],
+      ['width   height', 'Both 320. Position 0,0 is the TOP left.']
+    ]],
+    ['Games', [
+      ['onFrame(function () { })', 'Runs about 60 times a second.'],
+      ['onDrag(function (x) { })', 'x is where the finger is, across.'],
+      ['', 'Redraw the background first inside onFrame, or everything smears.']
+    ]]
+  ];
+
+  (function buildSheet() {
+    var html = '';
+    SHEET.forEach(function (group) {
+      html += '<div class="sheet-section"><h3>' + esc(group[0]) + '</h3>';
+      group[1].forEach(function (row) {
+        html += '<div class="sheet-row"><pre>' + esc(row[0]) + '</pre><span>' +
+          esc(row[1]) + '</span></div>';
+      });
+      html += '</div>';
+    });
+    $('sheet').innerHTML = html;
+  })();
+
+  /* ========================================================================
+     Start
+     ====================================================================== */
+
+  // Pause a running game when the app is put in the background, so a tablet
+  // left on the lock screen is not burning battery on an animation.
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) stopAnimation();
+    else if (liveCtx && liveCtx.frameFns && liveCtx.frameFns.length &&
+             !$('screen-mission').hidden) startAnimation(liveCtx);
+  });
+
+  window.addEventListener('resize', function () { sizeCanvas(); });
+
+  // The __arcadeDev screenshot hook was removed on 18th November 2026 so a
+  // curious child cannot unlock missions from the browser console. If visual
+  // checks are needed again, re-add it here temporarily and do not ship it.
+
+  renderMap();
+  refreshEditor();
+  show('home');
+})();
+</script>
+</body>
+</html>
